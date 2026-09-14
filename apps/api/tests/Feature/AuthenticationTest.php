@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -32,6 +34,14 @@ class AuthenticationTest extends TestCase
             ->assertJsonMissingPath('data.password')
             ->assertJsonMissingPath('data.password_hash');
         $this->assertAuthenticated();
+    }
+
+    public function test_stateful_api_routes_do_not_duplicate_the_web_middleware(): void
+    {
+        $middleware = Route::getRoutes()->getByName('projects.index')->gatherMiddleware();
+
+        $this->assertNotContains('web', $middleware);
+        $this->assertNotContains(StartSession::class, $middleware);
     }
 
     public function test_duplicate_email_is_rejected(): void

@@ -16,6 +16,21 @@ class ProjectTest extends TestCase
         $this->getJson('/api/projects')->assertUnauthorized();
     }
 
+    public function test_project_mutations_are_allowed_by_browser_preflight(): void
+    {
+        foreach (['PATCH', 'DELETE'] as $method) {
+            $this->withHeaders([
+                'Origin' => 'http://127.0.0.1:3000',
+                'Access-Control-Request-Method' => $method,
+                'Access-Control-Request-Headers' => 'content-type,x-xsrf-token',
+            ])->options('/api/projects/1')
+                ->assertNoContent()
+                ->assertHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
+                ->assertHeader('Access-Control-Allow-Credentials', 'true')
+                ->assertHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+        }
+    }
+
     public function test_a_user_sees_only_their_own_projects_in_position_order(): void
     {
         $user = User::factory()->create();

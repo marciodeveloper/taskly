@@ -50,7 +50,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         </label>
         <input
           id="project-name"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
@@ -64,7 +64,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         </label>
         <textarea
           id="project-description"
-          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500"
+          className="min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
@@ -82,7 +82,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
             onChange={(event) => setColor(event.target.value.toUpperCase())}
           />
           <input
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 uppercase focus:ring-2 focus:ring-indigo-500"
             value={color}
             onChange={(event) => setColor(event.target.value)}
             pattern="^#[0-9A-Fa-f]{6}$"
@@ -111,7 +111,8 @@ export default function DashboardPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
@@ -153,8 +154,8 @@ export default function DashboardPage() {
   }
 
   async function removeProject() {
-    if (!selected) return;
-    setDeleting(true);
+    if (!selected || deletePending) return;
+    setDeletePending(true);
     try {
       await api.deleteProject(selected.id);
       const remaining = projects.filter((project) => project.id !== selected.id);
@@ -164,7 +165,8 @@ export default function DashboardPage() {
     } catch {
       setFeedback("Unable to delete this project.");
     } finally {
-      setDeleting(false);
+      setDeletePending(false);
+      setDeleteDialogOpen(false);
     }
   }
 
@@ -233,15 +235,15 @@ export default function DashboardPage() {
           {!creating && !editing && selected && <div>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div><div className="flex items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color ?? "#94A3B8" }} aria-hidden="true" /><h2 className="text-3xl font-bold text-slate-900">{selected.name}</h2></div><p className="mt-3 text-slate-600">{selected.description || "No description yet."}</p></div>
-              <div className="flex gap-2"><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)}>Edit</button><button className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" onClick={() => setDeleting(true)}>Delete</button></div>
+              <div className="flex gap-2"><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)}>Edit</button><button className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
             </div>
             <div className="mt-16 rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Tasks will appear here later.</div>
           </div>}
           {feedback && <p className="mt-5 text-sm font-medium text-emerald-700" role="status">{feedback}</p>}
         </section>
       </div>
-      {deleting && selected && <div className="fixed inset-0 z-10 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="mt-2 text-slate-600">This action cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700" onClick={() => setDeleting(false)}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700" onClick={removeProject} disabled={deleting}>{deleting ? "Deleting..." : "Delete project"}</button></div></div>
+      {deleteDialogOpen && selected && <div className="fixed inset-0 z-10 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="mt-2 text-slate-600">This action cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" onClick={removeProject} disabled={deletePending}>{deletePending ? "Deleting..." : "Delete project"}</button></div></div>
       </div>}
     </main>
   );
