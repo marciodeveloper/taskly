@@ -8,6 +8,16 @@ export type User = {
   email: string;
 };
 
+export type Project = {
+  id: number;
+  name: string;
+  description: string | null;
+  color: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ValidationErrors = Record<string, string[]>;
 
 export class ApiError extends Error {
@@ -104,4 +114,30 @@ export const api = {
     ),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }, true),
   me: () => request<User>("/api/me"),
+  getProjects: () => request<Project[]>("/api/projects"),
+  getProject: (id: number) => request<Project>(`/api/projects/${id}`),
+  createProject: (payload: {
+    name: string;
+    description?: string;
+    color?: string;
+  }) =>
+    request<Project>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }, true),
+  updateProject: (
+    id: number,
+    payload: { name?: string; description?: string | null; color?: string | null },
+  ) =>
+    request<Project>(`/api/projects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }, true),
+  deleteProject: (id: number) =>
+    request<void>(`/api/projects/${id}`, { method: "DELETE" }, true),
+  reorderProjects: (project_ids: number[]) =>
+    request<void>("/api/projects/reorder", {
+      method: "PATCH",
+      body: JSON.stringify({ project_ids }),
+    }, true),
 };
