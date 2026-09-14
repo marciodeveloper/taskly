@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: taskly
+      POSTGRES_USER: taskly
+      POSTGRES_PASSWORD: taskly
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskly -d taskly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../docker/api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: taskly
+      DB_USERNAME: taskly
+      DB_PASSWORD: taskly
+    volumes:
+      - ./apps/api:/var/www/html
+      - api_vendor:/var/www/html/vendor
+    ports:
+      - "127.0.0.1:18000:8000"
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../docker/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:18000
+      API_INTERNAL_URL: http://api:8000
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  postgres_data:
+  api_vendor:
+  web_node_modules:
