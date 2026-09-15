@@ -209,6 +209,78 @@ O repositório começa com commits de documentação/especificação. O bootstra
 
 ---
 
+## AI-004 — Localização pt-BR e revisão de acabamento
+
+- **Data:** 2026-09-15
+- **Ferramenta/modelo:** Claude Code — Opus / Medium
+- **Objetivo:** Localizar a experiência do Taskly, o backend e a documentação para pt-BR, adicionar visibilidade de senha na autenticação e preservar arquitetura e contratos técnicos.
+
+### Prompt/contexto
+
+O produto já estava funcional e havia passado por rodadas de QA humano. O pedido foi explicitamente de acabamento, não de reescrita, com restrições diretas: não alterar regras de negócio, não alterar arquitetura e não introduzir abstrações desnecessárias.
+
+O contexto de negócio é que a UEX é uma empresa brasileira, então a experiência do produto e a documentação destinada a pessoas deveriam estar em português do Brasil.
+
+### Contribuição da IA
+
+Auditoria do repositório antes de editar, seguida da implementação:
+
+- componente `PasswordInput` reutilizável, com alternância Eye/EyeOff (lucide-react);
+- localização completa da interface, incluindo textos ARIA, e formatação de datas com locale pt-BR;
+- localização das mensagens do Laravel pelo mecanismo nativo (`lang/pt_BR/` e `APP_LOCALE`), sem condicionais de idioma espalhadas pelo código;
+- tradução do README, SPEC, ARCHITECTURE, AI_USAGE e dos cinco ADRs.
+
+A auditoria também levantou quatro itens que não faziam parte do pedido original:
+
+1. `formatDateTime`/`formatDue` estavam duplicados em dois arquivos, ambos com locale `undefined`;
+2. os labels de status estavam acoplados à `TaskWorkspace` e desciam por prop até o Kanban;
+3. `feedback.startsWith("Unable")` governava o estilo de erro do feedback em dois pontos — traduzir as mensagens quebraria silenciosamente o retorno visual de erro;
+4. o campo de senha do login usava `autocomplete="new-password"` em vez de `current-password`.
+
+### Revisão humana
+
+As quatro correções acima foram aceitas por terem causa técnica concreta, e não por preferência estética. O item 3 em particular era um defeito latente que só apareceria depois da tradução.
+
+Decisões de fronteira mantidas na revisão:
+
+- contratos técnicos permanecem em inglês: valores de enum, campos de payload, rotas, chaves JSON, nomes de classe, tabelas e migrations;
+- apenas strings visíveis ao usuário foram para pt-BR;
+- o mapa `attributes` do `validation.php` traduz o rótulo exibido sem alterar o nome do campo no payload.
+
+### Correção/rejeição
+
+**Rejeitado:** criar um link "Esqueci minha senha?" na interface. A restrição foi dada pelo humano e confirmada por inspeção: existe apenas a tabela `password_reset_tokens` do template padrão do Laravel, sem rotas nem controller. Um link sem backend seria um caminho morto. Foi registrado como melhoria futura no README.
+
+**Rejeitado:** adicionar biblioteca de i18n. O produto é monolíngue e a introdução de `next-intl` ou equivalente seria mudança arquitetural, fora do escopo pedido.
+
+**Corrigido — resultado de ferramenta não aceito de imediato:** o script de QA acusou três falhas nas mensagens de erro da autenticação. A investigação mostrou que o produto estava correto e o script é que estava errado: o Next.js em modo dev injeta um elemento `[role="alert"]` vazio, que o seletor capturava antes do alerta real. O seletor foi corrigido; nenhuma mudança foi feita no produto para "fazer o teste passar".
+
+**Sinalizado para decisão humana:** o README declarava "No application framework has been bootstrapped yet" e listava como próximo marco um trabalho já concluído. Traduzir literalmente publicaria uma afirmação falsa em pt-BR. As seções de status e execução foram reescritas com fatos conferidos contra `docker-compose.yml` e os Dockerfiles, e o desvio da tradução literal foi reportado explicitamente em vez de aplicado em silêncio.
+
+### Validação
+
+- `npm run lint`: limpo;
+- `npm run build`: OK;
+- `php artisan test`: 76 testes, 327 asserções, todos passando;
+- `git diff --check`: limpo;
+- QA automatizado com Playwright, 40 verificações: autenticação, comportamento do Eye/EyeOff (independência entre senha e confirmação, preservação do valor, foco por teclado, não submissão), responsividade em 1440/768/390, Kanban com mouse e toque, drawers desktop e mobile, e varredura de inglês remanescente na interface.
+
+Um único teste foi alterado: a asserção da mensagem de credenciais inválidas em `AuthenticationTest`, porque a mudança de idioma a tornou incorreta. A propriedade de segurança verificada — não revelar a existência da conta — permanece intacta.
+
+### Decisão final
+
+Localização aceita com a arquitetura preservada. Nenhum contrato de API, migration ou regra de negócio foi alterado. As correções de duplicação ficaram restritas a três módulos pequenos (`lib/format.ts`, `lib/tasks/status.ts`, `lib/feedback.ts`), sem introduzir camadas novas.
+
+### Arquivos/commits relacionados
+
+- commit `80dc0dc` — `feat(auth): adicionar controle de visibilidade de senha`
+- commit `38d4062` — `feat(i18n): localizar interface do Taskly para pt-BR`
+- commit `85121fc` — `fix(i18n): localizar mensagens do backend para pt-BR`
+- commit `7a07050` — `style(auth): remover espaco morto abaixo dos campos`
+- commit `e4c4f50` — `docs: traduzir documentacao tecnica para pt-BR`
+
+---
+
 ## Política de revisão para código gerado por IA
 
 Antes de aceitar código gerado ou modificado por IA, a revisão deve considerar os itens relevantes abaixo:
