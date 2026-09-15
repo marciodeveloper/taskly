@@ -17,7 +17,7 @@ export default function LoginPage() {
   if (loading || user) return null;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-5 bg-slate-100 px-6 py-16">
+    <main className="ds-auth-page flex flex-1 flex-col items-center justify-center gap-5 px-4 py-16 sm:px-6">
       <AuthForm
         title="Welcome back"
         submitLabel="Sign in"
@@ -27,9 +27,9 @@ export default function LoginPage() {
           router.push("/dashboard");
         }}
       />
-      <p className="text-sm text-slate-600">
+      <p className="ds-copy">
         New to Taskly?{" "}
-        <Link className="font-semibold text-indigo-600 hover:underline" href="/register">
+        <Link className="ds-accent-text font-semibold hover:underline" href="/register">
           Create an account
         </Link>
       </p>

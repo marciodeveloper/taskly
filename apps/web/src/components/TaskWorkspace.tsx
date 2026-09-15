@@ -38,8 +38,8 @@ function formatFileSize(bytes: number): string {
 }
 
 function TagChip({ tag }: { tag: Tag }) {
-  return <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-    {tag.color && <span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ backgroundColor: tag.color }} aria-hidden="true" />}
+  return <span className="ds-tag">
+    {tag.color && <span className="ds-tag-dot" style={{ backgroundColor: tag.color }} aria-hidden="true" />}
     {tag.name}
   </span>;
 }
@@ -66,10 +66,10 @@ function PersistedImagePreview({ attachment }: { attachment: Attachment }) {
     };
   }, [attachment.id]);
 
-  if (previewError) return <span className="text-xs text-red-700">Preview unavailable</span>;
-  if (!previewUrl) return <span className="text-xs text-slate-500">Loading preview...</span>;
+  if (previewError) return <span className="ds-danger-text text-xs">Preview unavailable</span>;
+  if (!previewUrl) return <span className="ds-meta">Loading preview...</span>;
 
-  return <Image alt="" className="h-12 w-12 rounded-md border border-slate-200 object-cover" src={previewUrl} width={48} height={48} unoptimized />;
+  return <Image alt="" className="ds-thumbnail" src={previewUrl} width={48} height={48} unoptimized />;
 }
 
 function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete?: (attachment: Attachment) => void }) {
@@ -117,15 +117,15 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
     }
   }
 
-  return <li className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+  return <li className="ds-attachment flex flex-wrap items-center gap-3">
     {attachment.is_image && <PersistedImagePreview attachment={attachment} />}
     <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-semibold text-slate-800">{attachment.original_name}</p>
-      <p className="text-xs text-slate-500">{attachment.mime_type} · {formatFileSize(attachment.size)}</p>
+      <p className="ds-attachment-name truncate">{attachment.original_name}</p>
+      <p className="ds-meta">{attachment.mime_type} · {formatFileSize(attachment.size)}</p>
     </div>
-    <button className="rounded-md px-2 py-1 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 focus:ring-2 focus:ring-indigo-500 disabled:opacity-60" disabled={openPending} onClick={() => void openAttachment()} type="button">{openPending ? "Loading..." : attachment.is_image ? "Open" : "Download"}</button>
-    {onDelete && <button className="rounded-md px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 focus:ring-2 focus:ring-red-500" onClick={() => onDelete(attachment)} type="button">Delete</button>}
-    {openError && <p className="w-full text-sm text-red-700" role="alert">{openError}</p>}
+    <button className="ds-button ds-button-ghost ds-accent-text" disabled={openPending} onClick={() => void openAttachment()} type="button">{openPending ? "Loading..." : attachment.is_image ? "Open" : "Download"}</button>
+    {onDelete && <button className="ds-button ds-button-danger" onClick={() => onDelete(attachment)} type="button">Delete</button>}
+    {openError && <p className="ds-danger-text w-full text-xs" role="alert">{openError}</p>}
   </li>;
 }
 
@@ -143,7 +143,7 @@ function PendingImagePreview({ file }: { file: File }) {
 
   // This local blob URL is temporary and cannot be processed by the Next image optimizer.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img ref={imageRef} alt={`Preview of ${file.name}`} className="h-12 w-12 shrink-0 rounded-md border border-slate-200 object-cover" />;
+  return <img ref={imageRef} alt={`Preview of ${file.name}`} className="ds-thumbnail" />;
 }
 
 type TaskFormProps = {
@@ -265,55 +265,55 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
     }
   }
 
-  return <form className="grid gap-5 rounded-xl border border-slate-200 bg-slate-50 p-5" onSubmit={submit}>
+  return <form className="ds-form grid gap-5" onSubmit={submit}>
     <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-title">Title <span className="text-red-600">*</span></label>
-      <input id="task-title" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={title} onChange={(event) => setTitle(event.target.value)} aria-describedby={errors.title ? "task-title-error" : undefined} required />
-      {errors.title?.map((error) => <p className="mt-1 text-xs text-red-600" id="task-title-error" key={error}>{error}</p>)}
+      <label className="ds-label mb-1" htmlFor="task-title">Title <span className="ds-danger-text">*</span></label>
+      <input id="task-title" className="ds-input" value={title} onChange={(event) => setTitle(event.target.value)} aria-describedby={errors.title ? "task-title-error" : undefined} required />
+      {errors.title?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="task-title-error" key={error}>{error}</p>)}
     </div>
     <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-short-description">Short description</label>
-      <input id="task-short-description" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} maxLength={500} />
-      {errors.short_description?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
+      <label className="ds-label mb-1" htmlFor="task-short-description">Short description</label>
+      <input id="task-short-description" className="ds-input" value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} maxLength={500} />
+      {errors.short_description?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
     </div>
     <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-description">Description</label>
-      <textarea id="task-description" className="min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={description} onChange={(event) => setDescription(event.target.value)} />
+      <label className="ds-label mb-1" htmlFor="task-description">Description</label>
+      <textarea id="task-description" className="ds-input" value={description} onChange={(event) => setDescription(event.target.value)} />
     </div>
     <div className="grid gap-4 sm:grid-cols-2">
-      <div><label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-status">Status</label><select id="task-status" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
-      <div><label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-due-at">Due date</label><input id="task-due-at" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />{errors.due_at?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}</div>
+      <div><label className="ds-label mb-1" htmlFor="task-status">Status</label><select id="task-status" className="ds-input" value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
+      <div><label className="ds-label mb-1" htmlFor="task-due-at">Due date</label><input id="task-due-at" className="ds-input" type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />{errors.due_at?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}</div>
     </div>
     <fieldset>
-      <legend className="text-sm font-semibold text-slate-700">Tags</legend>
+      <legend className="ds-label">Tags</legend>
       <div className="mt-2 flex flex-wrap gap-2">
-        {availableTags.length === 0 && <p className="text-sm text-slate-500">No tags yet.</p>}
-        {availableTags.map((tag) => { const selected = selectedTagIds.includes(tag.id); return <button key={tag.id} className={`rounded-full border px-3 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 ${selected ? "border-indigo-500 bg-indigo-50 text-indigo-800" : "border-slate-300 bg-white text-slate-700"}`} aria-pressed={selected} onClick={() => toggleTag(tag.id)} type="button">{selected ? "✓ " : ""}{tag.name}</button>; })}
+        {availableTags.length === 0 && <p className="ds-meta">No tags yet.</p>}
+        {availableTags.map((tag) => { const selected = selectedTagIds.includes(tag.id); return <button key={tag.id} className="ds-tag" aria-pressed={selected} onClick={() => toggleTag(tag.id)} type="button">{selected ? "✓ " : ""}{tag.name}</button>; })}
       </div>
-      {errors.tag_ids?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
+      {errors.tag_ids?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-        <label className="sr-only" htmlFor="new-tag-name">New tag name</label><input id="new-tag-name" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="New tag name" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} maxLength={50} />
-        <label className="sr-only" htmlFor="new-tag-color">New tag color</label><input id="new-tag-color" className="h-10 w-12 rounded border border-slate-300 bg-white" type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value.toUpperCase())} />
-        <button className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60" disabled={creatingTag || !newTagName.trim()} onClick={() => void createTag()} type="button">{creatingTag ? "Adding..." : "Add tag"}</button>
+        <label className="sr-only" htmlFor="new-tag-name">New tag name</label><input id="new-tag-name" className="ds-input" placeholder="New tag name" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} maxLength={50} />
+        <label className="sr-only" htmlFor="new-tag-color">New tag color</label><input id="new-tag-color" className="ds-color-input" type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value.toUpperCase())} />
+        <button className="ds-button ds-button-secondary" disabled={creatingTag || !newTagName.trim()} onClick={() => void createTag()} type="button">{creatingTag ? "Adding..." : "Add tag"}</button>
       </div>
     </fieldset>
     <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-attachments">Add attachments</label>
-      <input id="task-attachments" className="block w-full rounded-lg border border-slate-300 bg-white text-sm text-slate-700 file:mr-3 file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" onChange={(event) => {
+      <label className="ds-label mb-1" htmlFor="task-attachments">Add attachments</label>
+      <input id="task-attachments" className="ds-file-input block w-full" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" onChange={(event) => {
         const files = Array.from(event.currentTarget.files ?? []);
         if (files.length > 0) setPendingFiles((current) => [...current, ...files]);
         event.currentTarget.value = "";
       }} />
-      <p className="mt-1 text-xs text-slate-500">JPEG, PNG, WebP, PDF, or text; up to 10 MB each.</p>
-      {pendingFiles.length > 0 && <div className="mt-3" role="status"><h4 className="text-sm font-semibold text-slate-700">Pending attachments</h4><p className="mt-1 text-xs text-slate-500">These files upload after you save the task.</p><ul className="mt-2 grid gap-2">{pendingFiles.map((file, index) => <li className="flex items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm" key={`${file.name}-${file.lastModified}-${index}`}>{previewableImageTypes.has(file.type) && <PendingImagePreview file={file} />}<span className="min-w-0 flex-1 truncate">{file.name} · {formatFileSize(file.size)}</span><button className="font-semibold text-red-700 hover:underline disabled:opacity-60" disabled={saving} onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button">Remove</button></li>)}</ul></div>}
+      <p className="ds-meta mt-1">JPEG, PNG, WebP, PDF, or text; up to 10 MB each.</p>
+      {pendingFiles.length > 0 && <div className="mt-3" role="status"><h4 className="ds-label">Pending attachments</h4><p className="ds-meta mt-1">These files upload after you save the task.</p><ul className="mt-2 grid gap-2">{pendingFiles.map((file, index) => <li className="ds-attachment flex items-center gap-3" key={`${file.name}-${file.lastModified}-${index}`}>{previewableImageTypes.has(file.type) && <PendingImagePreview file={file} />}<span className="ds-copy min-w-0 flex-1 truncate">{file.name} · {formatFileSize(file.size)}</span><button className="ds-button ds-button-danger" disabled={saving} onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button">Remove</button></li>)}</ul></div>}
     </div>
-    {persistedTask && persistedTask.attachments.length > 0 && <div><h4 className="text-sm font-semibold text-slate-700">Current attachments</h4><ul className="mt-2 grid gap-2">{persistedTask.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} onDelete={setAttachmentToDelete} />)}</ul></div>}
-    {message && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{message}</p>}
+    {persistedTask && persistedTask.attachments.length > 0 && <div><h4 className="ds-label">Current attachments</h4><ul className="mt-2 grid gap-2">{persistedTask.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} onDelete={setAttachmentToDelete} />)}</ul></div>}
+    {message && <p className="ds-alert" role="alert">{message}</p>}
     <div className="flex flex-wrap gap-2">
-      <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60" disabled={saving || creatingTag || attachmentDeletePending} type="submit">{saving ? (pendingFiles.length > 0 ? "Saving and uploading..." : "Saving...") : persistedTask ? "Save changes" : "Create task"}</button>
-      <button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-white disabled:opacity-60" disabled={saving || attachmentDeletePending} onClick={onCancel} type="button">Cancel</button>
+      <button className="ds-button ds-button-primary" disabled={saving || creatingTag || attachmentDeletePending} type="submit">{saving ? (pendingFiles.length > 0 ? "Saving and uploading..." : "Saving...") : persistedTask ? "Save changes" : "Create task"}</button>
+      <button className="ds-button ds-button-secondary" disabled={saving || attachmentDeletePending} onClick={onCancel} type="button">Cancel</button>
     </div>
-    {attachmentToDelete && <div className="fixed inset-0 z-30 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-attachment-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-attachment-title">Delete &quot;{attachmentToDelete.original_name}&quot;?</h2><p className="mt-2 text-slate-600">The private file will be permanently removed.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" disabled={attachmentDeletePending} onClick={() => void deleteAttachment()} type="button">{attachmentDeletePending ? "Deleting..." : "Delete attachment"}</button></div></div></div>}
+    {attachmentToDelete && <div className="ds-modal-overlay fixed inset-0 z-30 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-attachment-title"><div className="ds-modal"><h2 className="ds-modal-title" id="delete-attachment-title">Delete &quot;{attachmentToDelete.original_name}&quot;?</h2><p className="ds-copy mt-2">The private file will be permanently removed.</p><div className="mt-6 flex flex-wrap justify-end gap-2"><button className="ds-button ds-button-secondary" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancel</button><button className="ds-button ds-button-danger-solid" disabled={attachmentDeletePending} onClick={() => void deleteAttachment()} type="button">{attachmentDeletePending ? "Deleting..." : "Delete attachment"}</button></div></div></div>}
   </form>;
 }
 
@@ -387,22 +387,22 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     onTagCreated: (tag: Tag) => setTags((current) => [...current, tag].sort((a, b) => a.name.localeCompare(b.name))),
   };
 
-  return <div className="mt-10 min-w-0 border-t border-slate-200 pt-8">
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h3 className="text-xl font-bold text-slate-900">Tasks</h3><div className="flex flex-wrap items-center gap-3"><div className="inline-flex rounded-lg border border-slate-300 p-0.5" aria-label="Task view"><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "list" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "list"} onClick={() => setView("list")} type="button">List</button><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "kanban" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "kanban"} onClick={() => setView("kanban")} type="button">Kanban</button></div>{!creating && !editingTask && <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setFeedback(""); }}>+ New task</button>}</div></div>
+  return <div className="ds-task-workspace min-w-0">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4"><h3 className="ds-section-title">Tasks</h3><div className="flex flex-wrap items-center gap-3"><div className="ds-view-toggle" aria-label="Task view"><button className="ds-view-option" aria-pressed={view === "list"} onClick={() => setView("list")} type="button">List</button><button className="ds-view-option" aria-pressed={view === "kanban"} onClick={() => setView("kanban")} type="button">Kanban</button></div>{!creating && !editingTask && <button className="ds-button ds-button-primary" onClick={() => { setCreating(true); setFeedback(""); }}>+ New task</button>}</div></div>
     {creating && <TaskForm {...formProps} onCancel={() => setCreating(false)} />}
     {editingTask && <TaskForm {...formProps} task={editingTask} onCancel={() => setEditingTask(null)} />}
-    {loading && <p className="text-sm text-slate-500">Loading tasks...</p>}
-    {loadError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p>}
-    {!loading && !loadError && tasks.length === 0 && !creating && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">No tasks yet. Create one to plan the next step.</p>}
+    {loading && <p className="ds-meta">Loading tasks...</p>}
+    {loadError && <p className="ds-alert" role="alert">{loadError}</p>}
+    {!loading && !loadError && tasks.length === 0 && !creating && <div className="ds-empty"><p className="ds-empty-title">No tasks yet</p><p className="ds-copy mt-1">Create one to plan the next step.</p></div>}
     {!loading && !loadError && tasks.length > 0 && view === "kanban" && <TaskKanban tasks={tasks} statuses={statuses} pendingTaskIds={pendingTaskIds} editingTaskId={editingTask?.id ?? null} onMove={(task, status) => void changeStatus(task, status)} onEdit={(task) => { setEditingTask(task); setCreating(false); setFeedback(""); }} onDelete={(task) => { setTaskToDelete(task); setFeedback(""); }} />}
-    {!loading && !loadError && tasks.length > 0 && view === "list" && <div className="mt-5 grid gap-3">{tasks.map((task) => <article className={`rounded-xl border p-4 ${task.status === "completed" ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"}`} key={task.id}>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className={`font-semibold text-slate-900 ${task.status === "completed" ? "line-through decoration-slate-400" : ""}`}>{task.title}</h4>{task.short_description && <p className="mt-1 text-sm text-slate-600">{task.short_description}</p>}{task.due_at && <p className="mt-2 text-xs font-medium text-slate-500">Due · {formatDateTime(task.due_at)}</p>}</div><select className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 disabled:opacity-60" aria-label={`Status for ${task.title}`} disabled={pendingTaskIds.has(task.id) || editingTask?.id === task.id} value={task.status} onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
-      {task.description && <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{task.description}</p>}
+    {!loading && !loadError && tasks.length > 0 && view === "list" && <div className="mt-5 grid gap-3">{tasks.map((task) => <article className="ds-task-card" data-status={task.status} key={task.id}>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className={`ds-card-title ${task.status === "completed" ? "line-through" : ""}`}>{task.title}</h4>{task.short_description && <p className="ds-copy mt-1">{task.short_description}</p>}{task.due_at && <p className="ds-meta mt-2">Due · {formatDateTime(task.due_at)}</p>}</div><select className="ds-input ds-status-select" aria-label={`Status for ${task.title}`} disabled={pendingTaskIds.has(task.id) || editingTask?.id === task.id} value={task.status} onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
+      {task.description && <p className="ds-copy mt-3 whitespace-pre-wrap">{task.description}</p>}
       {task.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Tags">{task.tags.map((tag) => <TagChip tag={tag} key={tag.id} />)}</div>}
       {task.attachments.length > 0 && <ul className="mt-3 grid gap-2">{task.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} />)}</ul>}
-      <div className="mt-4 flex gap-3 text-sm font-semibold"><button className="text-indigo-600 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>Edit</button><button className="text-red-700 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setTaskToDelete(task); setFeedback(""); }}>Delete</button></div>
+      <div className="mt-4 flex gap-1"><button className="ds-button ds-button-ghost" disabled={pendingTaskIds.has(task.id)} onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>Edit</button><button className="ds-button ds-button-danger" disabled={pendingTaskIds.has(task.id)} onClick={() => { setTaskToDelete(task); setFeedback(""); }}>Delete</button></div>
     </article>)}</div>}
-    {feedback && <p className={`mt-4 text-sm font-medium ${feedback.startsWith("Unable") ? "text-red-700" : "text-emerald-700"}`} role="status">{feedback}</p>}
-    {taskToDelete && <div className="fixed inset-0 z-20 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-task-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-task-title">Delete &quot;{taskToDelete.title}&quot;?</h2><p className="mt-2 text-slate-600">This action and its attachments cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" disabled={deletePending} onClick={() => setTaskToDelete(null)}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" disabled={deletePending} onClick={() => void deleteTask()}>{deletePending ? "Deleting..." : "Delete task"}</button></div></div></div>}
+    {feedback && <p className={`ds-feedback mt-4 ${feedback.startsWith("Unable") ? "ds-feedback-error" : ""}`} role="status">{feedback}</p>}
+    {taskToDelete && <div className="ds-modal-overlay fixed inset-0 z-20 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-task-title"><div className="ds-modal"><h2 className="ds-modal-title" id="delete-task-title">Delete &quot;{taskToDelete.title}&quot;?</h2><p className="ds-copy mt-2">This action and its attachments cannot be undone.</p><div className="mt-6 flex flex-wrap justify-end gap-2"><button className="ds-button ds-button-secondary" disabled={deletePending} onClick={() => setTaskToDelete(null)}>Cancel</button><button className="ds-button ds-button-danger-solid" disabled={deletePending} onClick={() => void deleteTask()}>{deletePending ? "Deleting..." : "Delete task"}</button></div></div></div>}
   </div>;
 }

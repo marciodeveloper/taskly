@@ -17,7 +17,7 @@ export default function RegisterPage() {
   if (loading || user) return null;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-5 bg-slate-100 px-6 py-16">
+    <main className="ds-auth-page flex flex-1 flex-col items-center justify-center gap-5 px-4 py-16 sm:px-6">
       <AuthForm
         title="Create your account"
         submitLabel="Create account"
@@ -32,9 +32,9 @@ export default function RegisterPage() {
           router.push("/dashboard");
         }}
       />
-      <p className="text-sm text-slate-600">
+      <p className="ds-copy">
         Already have an account?{" "}
-        <Link className="font-semibold text-indigo-600 hover:underline" href="/login">
+        <Link className="ds-accent-text font-semibold hover:underline" href="/login">
           Sign in
         </Link>
       </p>

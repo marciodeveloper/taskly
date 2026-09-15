@@ -46,58 +46,58 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
   return (
     <form className="grid gap-4" onSubmit={submit}>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-name">
-          Name <span className="text-red-600">*</span>
+        <label className="ds-label mb-1" htmlFor="project-name">
+          Name <span className="ds-danger-text">*</span>
         </label>
         <input
           id="project-name"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
+          className="ds-input"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
           aria-describedby="project-name-error"
         />
-        {errors.name?.map((error) => <p className="mt-1 text-xs text-red-600" id="project-name-error" key={error}>{error}</p>)}
+        {errors.name?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="project-name-error" key={error}>{error}</p>)}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-description">
+        <label className="ds-label mb-1" htmlFor="project-description">
           Description
         </label>
         <textarea
           id="project-description"
-          className="min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
+          className="ds-input"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-color">
+        <label className="ds-label mb-1" htmlFor="project-color">
           Color
         </label>
         <div className="flex gap-2">
           <input
             id="project-color"
-            className="h-10 w-14 rounded border border-slate-300"
+            className="ds-color-input"
             type="color"
             value={color}
             onChange={(event) => setColor(event.target.value.toUpperCase())}
           />
           <input
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 uppercase focus:ring-2 focus:ring-indigo-500"
+            className="ds-input uppercase"
             value={color}
             onChange={(event) => setColor(event.target.value)}
             pattern="^#[0-9A-Fa-f]{6}$"
             aria-label="Hex color"
           />
         </div>
-        {errors.color?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
+        {errors.color?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       </div>
-      {message && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p>}
+      {message && <p className="ds-alert" role="alert">{message}</p>}
       <div className="flex gap-2">
-        <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60" disabled={saving} type="submit">
+        <button className="ds-button ds-button-primary" disabled={saving} type="submit">
           {saving ? "Saving..." : project ? "Save changes" : "Create project"}
         </button>
-        {onCancel && <button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50" onClick={onCancel} type="button">Cancel</button>}
+        {onCancel && <button className="ds-button ds-button-secondary" onClick={onCancel} type="button">Cancel</button>}
       </div>
     </form>
   );
@@ -191,60 +191,60 @@ export default function DashboardPage() {
   if (authLoading || !user) return null;
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <p className="text-xl font-bold tracking-tight text-slate-900">Taskly</p>
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <span>{user.name}</span>
-            <button className="font-semibold text-indigo-600 hover:underline" onClick={async () => { await logout(); router.replace("/login"); }}>
+    <main className="ds-shell">
+      <header className="ds-topbar">
+        <div className="ds-topbar-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-6">
+          <p className="ds-brand">Taskly<span className="ds-brand-dot">.</span></p>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="ds-user">{user.name}</span>
+            <button className="ds-button ds-button-ghost" onClick={async () => { await logout(); router.replace("/login"); }}>
               Logout
             </button>
           </div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-2xl bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
-            <h1 className="font-bold text-slate-900">Projects</h1>
-            <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setEditing(false); }}>
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <aside className="ds-sidebar">
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <h1 className="ds-sidebar-title">Projects</h1>
+            <button className="ds-button ds-button-ghost" onClick={() => { setCreating(true); setEditing(false); }}>
               + New
             </button>
           </div>
-          {loading && <p className="text-sm text-slate-500">Loading projects...</p>}
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {!loading && !error && projects.length === 0 && <p className="text-sm text-slate-500">No projects yet. Create one to get started.</p>}
-          <div className="grid gap-2">
+          {loading && <p className="ds-meta">Loading projects...</p>}
+          {error && <p className="ds-alert" role="alert">{error}</p>}
+          {!loading && !error && projects.length === 0 && <p className="ds-copy">No projects yet. Create one to get started.</p>}
+          <div className="grid gap-1">
             {projects.map((project, index) => (
-              <div className={`flex items-center gap-1 rounded-lg ${project.id === selectedId ? "bg-indigo-50" : "hover:bg-slate-50"}`} key={project.id}>
-                <button className="flex min-w-0 flex-1 items-center gap-2 p-3 text-left text-sm font-medium text-slate-700" onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}>
+              <div className={`ds-project-row ${project.id === selectedId ? "is-selected" : ""}`} key={project.id}>
+                <button className="ds-project-select flex items-center gap-2 p-3" onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}>
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
                   <span className="truncate">{project.name}</span>
                 </button>
-                <div className="flex pr-2">
-                  <button className="p-1 text-xs text-slate-500 disabled:opacity-30" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => { setSelectedId(project.id); void moveProject(-1); }}>↑</button>
-                  <button className="p-1 text-xs text-slate-500 disabled:opacity-30" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => { setSelectedId(project.id); void moveProject(1); }}>↓</button>
+                <div className="ds-project-actions flex pr-1">
+                  <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => { setSelectedId(project.id); void moveProject(-1); }}>↑</button>
+                  <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => { setSelectedId(project.id); void moveProject(1); }}>↓</button>
                 </div>
               </div>
             ))}
           </div>
         </aside>
-        <section className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-          {creating && <><h2 className="mb-5 text-2xl font-bold text-slate-900">New project</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
-          {!creating && editing && selected && <><h2 className="mb-5 text-2xl font-bold text-slate-900">Edit project</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
-          {!creating && !editing && !selected && <div className="py-16 text-center"><h2 className="text-2xl font-bold text-slate-900">Choose a project</h2><p className="mt-2 text-slate-500">Create your first project to start organizing work.</p></div>}
+        <section className="ds-workspace">
+          {creating && <><h2 className="ds-page-title mb-6">New project</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
+          {!creating && editing && selected && <><h2 className="ds-page-title mb-6">Edit project</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
+          {!creating && !editing && !selected && <div className="ds-empty"><h2 className="ds-empty-title">Choose a project</h2><p className="ds-copy mt-2">Create your first project to start organizing work.</p></div>}
           {!creating && !editing && selected && <div className="min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div><div className="flex items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color ?? "#94A3B8" }} aria-hidden="true" /><h2 className="text-3xl font-bold text-slate-900">{selected.name}</h2></div><p className="mt-3 text-slate-600">{selected.description || "No description yet."}</p></div>
-              <div className="flex gap-2"><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)}>Edit</button><button className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
+              <div className="min-w-0"><div className="flex items-center gap-3"><span className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: selected.color ?? "#7F8894" }} aria-hidden="true" /><h2 className="ds-page-title">{selected.name}</h2></div><p className="ds-copy mt-3">{selected.description || "No description yet."}</p></div>
+              <div className="flex gap-2"><button className="ds-button ds-button-secondary" onClick={() => setEditing(true)}>Edit</button><button className="ds-button ds-button-danger" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
             </div>
             <TaskWorkspace key={selected.id} projectId={selected.id} />
           </div>}
-          {feedback && <p className="mt-5 text-sm font-medium text-emerald-700" role="status">{feedback}</p>}
+          {feedback && <p className={`ds-feedback mt-5 ${feedback.startsWith("Unable") ? "ds-feedback-error" : ""}`} role="status">{feedback}</p>}
         </section>
       </div>
-      {deleteDialogOpen && selected && <div className="fixed inset-0 z-10 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="mt-2 text-slate-600">This action cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" onClick={removeProject} disabled={deletePending}>{deletePending ? "Deleting..." : "Delete project"}</button></div></div>
+      {deleteDialogOpen && selected && <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+        <div className="ds-modal"><h2 className="ds-modal-title" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="ds-copy mt-2">This action cannot be undone.</p><div className="mt-6 flex flex-wrap justify-end gap-2"><button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button><button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>{deletePending ? "Deleting..." : "Delete project"}</button></div></div>
       </div>}
     </main>
   );

@@ -48,10 +48,10 @@ export function AuthForm({
   }
 
   const input = (name: string, label: string, type = "text") => (
-    <label className="grid gap-2 text-sm font-medium text-slate-700" key={name}>
+    <label className="ds-label grid gap-2" key={name}>
       {label}
       <input
-        className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-indigo-500 focus:ring-2"
+        className="ds-input"
         type={type}
         value={values[name] ?? ""}
         onChange={(event) => update(name, event.target.value)}
@@ -59,7 +59,7 @@ export function AuthForm({
         required
       />
       {errors[name]?.map((error) => (
-        <span className="text-xs font-normal text-red-600" key={error}>
+        <span className="ds-danger-text text-xs font-normal" key={error}>
           {error}
         </span>
       ))}
@@ -68,17 +68,17 @@ export function AuthForm({
 
   return (
     <form
-      className="grid w-full max-w-md gap-5 rounded-2xl bg-white p-8 shadow-xl"
+      className="ds-auth-card grid w-full max-w-md gap-5"
       onSubmit={submit}
     >
       <div>
-        <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">
+        <p className="ds-accent-text text-xs font-semibold uppercase tracking-wider">
           Taskly
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900">{title}</h1>
+        <h1 className="ds-page-title mt-2">{title}</h1>
       </div>
       {message && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p>
+        <p className="ds-alert" role="alert">{message}</p>
       )}
       {fields === "register" && input("name", "Name")}
       {input("email", "Email", "email")}
@@ -86,7 +86,7 @@ export function AuthForm({
       {fields === "register" &&
         input("password_confirmation", "Confirm password", "password")}
       <button
-        className="rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="ds-button ds-button-primary"
         type="submit"
         disabled={submitting}
       >
