@@ -1,0 +1,183 @@
+/* Task editor drawer: keeps List/Kanban visible while creating or editing work. */
+
+.ds-task-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(2px);
+  animation: taskly-drawer-fade var(--motion-default) ease both;
+}
+
+.ds-task-drawer {
+  position: fixed;
+  inset-block: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  width: min(92vw, 36rem);
+  max-width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid rgba(82, 96, 113, 0.42);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(41, 198, 211, 0.06), transparent 24rem),
+    rgba(14, 17, 20, 0.985);
+  box-shadow: -28px 0 80px rgba(0, 0, 0, 0.42);
+  animation: taskly-drawer-enter var(--motion-slow) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ds-task-drawer-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 92px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid rgba(82, 96, 113, 0.3);
+  background: rgba(14, 17, 20, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.ds-task-drawer-eyebrow {
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ds-task-drawer-title {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.ds-task-drawer-subtitle {
+  max-width: 28rem;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-task-drawer-close {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  color: var(--text-secondary);
+}
+
+.ds-task-drawer-body {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 22px 34px;
+  scrollbar-gutter: stable;
+}
+
+.ds-task-drawer .ds-form {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ds-task-drawer .ds-form > div,
+.ds-task-drawer .ds-form > fieldset {
+  min-width: 0;
+}
+
+.ds-task-drawer .ds-input,
+.ds-task-drawer .ds-file-input {
+  background-color: rgba(9, 11, 13, 0.58);
+}
+
+.ds-task-drawer .ds-attachment {
+  background: rgba(20, 24, 28, 0.72);
+}
+
+.ds-task-form-actions {
+  position: sticky;
+  bottom: -34px;
+  z-index: 4;
+  margin: 2px -22px -34px;
+  padding: 16px 22px 18px;
+  border-top: 1px solid rgba(82, 96, 113, 0.28);
+  background: linear-gradient(180deg, rgba(14, 17, 20, 0.94), rgba(14, 17, 20, 0.995) 42%);
+  backdrop-filter: blur(12px);
+}
+
+.ds-task-drawer .ds-modal-overlay {
+  z-index: 100 !important;
+}
+
+@keyframes taskly-drawer-enter {
+  from { transform: translateX(24px); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes taskly-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 767px) {
+  .ds-task-drawer-backdrop {
+    background: rgba(0, 0, 0, 0.58);
+  }
+
+  .ds-task-drawer {
+    width: 100vw;
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .ds-task-drawer-header {
+    min-height: 78px;
+    padding: 15px 16px 14px;
+  }
+
+  .ds-task-drawer-title {
+    font-size: 20px;
+  }
+
+  .ds-task-drawer-subtitle {
+    max-width: calc(100vw - 88px);
+  }
+
+  .ds-task-drawer-body {
+    padding: 18px 16px 28px;
+  }
+
+  .ds-task-form-actions {
+    bottom: -28px;
+    margin: 2px -16px -28px;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .ds-task-form-actions .ds-button-primary {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-task-drawer,
+  .ds-task-drawer-backdrop {
+    animation-duration: 0.01ms !important;
+  }
+}
