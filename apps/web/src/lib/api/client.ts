@@ -18,6 +18,34 @@ export type Project = {
   updated_at: string;
 };
 
+export type TaskStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export type Task = {
+  id: number;
+  project_id: number;
+  title: string;
+  short_description: string | null;
+  description: string | null;
+  status: TaskStatus;
+  due_at: string | null;
+  position: number | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaskPayload = {
+  title: string;
+  short_description?: string | null;
+  description?: string | null;
+  status: TaskStatus;
+  due_at?: string | null;
+};
+
 export type ValidationErrors = Record<string, string[]>;
 
 export class ApiError extends Error {
@@ -161,4 +189,19 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ project_ids }),
     }),
+  getTasks: (projectId: number) =>
+    request<Task[]>(`/api/projects/${projectId}/tasks`),
+  getTask: (taskId: number) => request<Task>(`/api/tasks/${taskId}`),
+  createTask: (projectId: number, payload: TaskPayload) =>
+    request<Task>(`/api/projects/${projectId}/tasks`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateTask: (taskId: number, payload: Partial<TaskPayload>) =>
+    request<Task>(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteTask: (taskId: number) =>
+    request<void>(`/api/tasks/${taskId}`, { method: "DELETE" }),
 };

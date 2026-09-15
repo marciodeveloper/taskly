@@ -1,7 +1,12 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { ApiError, api, type User } from "@/lib/api/client";
+import {
+  ApiError,
+  api,
+  setUnauthorizedHandler,
+  type User,
+} from "@/lib/api/client";
 
 type AuthContextValue = {
   user: User | null;
@@ -22,6 +27,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => setUnauthorizedHandler(() => setUser(null)), []);
 
   const refreshUser = async (): Promise<User | null> => {
     try {
