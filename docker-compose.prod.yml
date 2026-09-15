@@ -1,0 +1,66 @@
+name: taskly-production
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-taskly}
+      POSTGRES_USER: ${DB_USERNAME:-taskly}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../docker/api/Dockerfile.prod
+    env_file:
+      - ${TASKLY_ENV_FILE:-.env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - attachments_data:/var/www/html/storage/app/private/task-attachments
+    ports:
+      - "127.0.0.1:${TASKLY_API_PORT:-18081}:80"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../docker/web/Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_URL: https://taskly.webarthem.com
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://taskly.webarthem.com
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${TASKLY_WEB_PORT:-13080}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: taskly_production_postgres_data
+  attachments_data:
+    name: taskly_production_attachments

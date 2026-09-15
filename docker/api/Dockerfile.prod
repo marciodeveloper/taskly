@@ -1,0 +1,40 @@
+FROM php:8.3-cli-bookworm AS vendor
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git libpq-dev unzip \
+    && docker-php-ext-install pdo_pgsql \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+COPY . .
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader
+
+FROM php:8.3-apache-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install pdo_pgsql \
+    && a2enmod rewrite headers \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+COPY --from=vendor /var/www/html/vendor ./vendor
+COPY . .
+COPY production/apache-taskly.conf /etc/apache2/sites-available/000-default.conf
+COPY production/uploads.ini /usr/local/etc/php/conf.d/taskly-uploads.ini
+
+RUN mkdir -p storage/app/private/task-attachments \
+    storage/framework/cache/data storage/framework/sessions \
+    storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && su -s /bin/sh www-data -c 'php artisan package:discover --ansi'
+
+EXPOSE 80
+CMD ["apache2-foreground"]
