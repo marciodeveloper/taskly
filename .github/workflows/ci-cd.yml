@@ -89,9 +89,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify production host prerequisites
         run: |
-          test -d /home/dev/apps/taskly-production/.git
-          test -f /home/dev/apps/taskly-production/.env.production
-          test -x scripts/deploy-production.sh
+          test -d /home/dev/apps/taskly-production/.git || { echo 'Missing production checkout' >&2; exit 1; }
+          test -f /home/dev/apps/taskly-production/.env.production || { echo 'Missing .env.production' >&2; exit 1; }
+          test -f scripts/deploy-production.sh || { echo 'Missing deploy script' >&2; exit 1; }
       - name: Deploy the workflow commit locally by exact SHA
         run: bash scripts/deploy-production.sh "$GITHUB_SHA"
       - name: Public HTTPS smoke checks
