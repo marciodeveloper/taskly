@@ -4,6 +4,7 @@ import "./globals.css";
 import "./premium-v3.css";
 import "./navigation-v4.css";
 import "./interactions-v5.css";
+import "./task-drawer-v6.css";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
