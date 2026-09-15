@@ -19,8 +19,10 @@ export default function LoginPage() {
   return (
     <main className="ds-auth-page flex flex-1 flex-col items-center justify-center gap-5 px-4 py-16 sm:px-6">
       <AuthForm
-        title="Welcome back"
-        submitLabel="Sign in"
+        title="Bem-vindo de volta"
+        subtitle="Entre para continuar de onde você parou."
+        submitLabel="Entrar"
+        pendingLabel="Entrando..."
         fields="login"
         onSubmit={async (values) => {
           await login(values.email, values.password);
@@ -28,9 +30,9 @@ export default function LoginPage() {
         }}
       />
       <p className="ds-copy">
-        New to Taskly?{" "}
+        Ainda não tem conta?{" "}
         <Link className="ds-accent-text font-semibold hover:underline" href="/register">
-          Create an account
+          Criar conta
         </Link>
       </p>
     </main>

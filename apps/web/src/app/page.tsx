@@ -8,23 +8,23 @@ export default function Home() {
           Taskly
         </p>
         <h1 className="ds-page-title mt-4">
-          Keep your work moving.
+          Mantenha seu trabalho em movimento.
         </h1>
         <p className="ds-copy mt-5">
-          Sign in to your focused workspace or create an account to get started.
+          Entre no seu espaço de trabalho ou crie uma conta para começar.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             className="ds-button ds-button-primary"
             href="/login"
           >
-            Sign in
+            Entrar
           </Link>
           <Link
             className="ds-button ds-button-secondary"
             href="/register"
           >
-            Create account
+            Criar conta
           </Link>
         </div>
       </section>

@@ -23,8 +23,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type { Task, TaskStatus } from "@/lib/api/client";
-
-type StatusOption = { value: TaskStatus; label: string };
+import { formatDateTime } from "@/lib/format";
+import type { TaskStatusOption as StatusOption } from "@/lib/tasks/status";
 
 type Props = {
   tasks: Task[];
@@ -58,10 +58,6 @@ type KanbanColumnProps = {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
 };
-
-function formatDue(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
 
 function taskDragId(taskId: number): string {
   return `task:${taskId}`;
@@ -102,8 +98,8 @@ function KanbanCard({ task, statuses, pending, locked, overdue, onMove, onEdit, 
           className="ds-kanban-grip-button"
           disabled={locked}
           type="button"
-          aria-label={`Drag ${task.title}`}
-          title="Drag task"
+          aria-label={`Arrastar ${task.title}`}
+          title="Arrastar tarefa"
           {...attributes}
           {...listeners}
         >
@@ -119,13 +115,13 @@ function KanbanCard({ task, statuses, pending, locked, overdue, onMove, onEdit, 
         {task.due_at && (
           <span className="ds-inline-meta">
             <CalendarClock className="ds-icon-sm" aria-hidden="true" />
-            {formatDue(task.due_at)}
+            {formatDateTime(task.due_at)}
           </span>
         )}
         {overdue && (
           <span className="ds-overdue">
             <AlertTriangle className="ds-icon-sm" aria-hidden="true" />
-            Overdue
+            Atrasada
           </span>
         )}
         {task.attachments.length > 0 && (
@@ -137,7 +133,7 @@ function KanbanCard({ task, statuses, pending, locked, overdue, onMove, onEdit, 
       </div>
 
       {task.tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Tags">
+        <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Etiquetas">
           {task.tags.map((tag) => (
             <span key={tag.id} className="ds-tag">
               {tag.color && <span className="ds-tag-dot" style={{ backgroundColor: tag.color }} aria-hidden="true" />}
@@ -148,26 +144,26 @@ function KanbanCard({ task, statuses, pending, locked, overdue, onMove, onEdit, 
       )}
 
       <div className="ds-kanban-footer">
-        <label className="sr-only" htmlFor={`kanban-status-${task.id}`}>Status for {task.title}</label>
+        <label className="sr-only" htmlFor={`kanban-status-${task.id}`}>Status de {task.title}</label>
         <select
           id={`kanban-status-${task.id}`}
           className="ds-input ds-status-control"
-          aria-label={`Status for ${task.title}`}
+          aria-label={`Status de ${task.title}`}
           disabled={locked}
           value={task.status}
           onChange={(event) => onMove(task, event.target.value as TaskStatus)}
         >
           {statuses.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
-        {pending && <p className="ds-accent-text mt-2 text-xs" role="status">Moving...</p>}
+        {pending && <p className="ds-accent-text mt-2 text-xs" role="status">Movendo...</p>}
         <div className="ds-task-actions mt-3">
           <button className="ds-action-button" disabled={pending} onClick={() => onEdit(task)} type="button">
             <Pencil className="ds-icon-sm" aria-hidden="true" />
-            Edit
+            Editar
           </button>
           <button className="ds-action-button is-danger" disabled={pending} onClick={() => onDelete(task)} type="button">
             <Trash2 className="ds-icon-sm" aria-hidden="true" />
-            Delete
+            Excluir
           </button>
         </div>
       </div>
@@ -185,15 +181,15 @@ function KanbanColumn({ column, tasks, statuses, pendingTaskIds, editingTaskId, 
     <section
       ref={setNodeRef}
       className={`ds-kanban-column ${isOver ? "is-drop-target" : ""}`}
-      aria-label={`${column.label} column`}
+      aria-label={`Coluna ${column.label}`}
     >
       <h4 className="ds-kanban-heading mb-3 flex items-center justify-between gap-2" data-status={column.value}>
         {column.label}
-        <span className="ds-kanban-count" aria-label={`${tasks.length} tasks`}>{tasks.length}</span>
+        <span className="ds-kanban-count" aria-label={`${tasks.length} tarefas`}>{tasks.length}</span>
       </h4>
 
       <div className="grid content-start gap-3">
-        {tasks.length === 0 && <p className="ds-kanban-empty">No tasks</p>}
+        {tasks.length === 0 && <p className="ds-kanban-empty">Nenhuma tarefa</p>}
         {tasks.map((task) => {
           const pending = pendingTaskIds.has(task.id);
           const locked = pending || editingTaskId === task.id;
@@ -269,8 +265,8 @@ export default function TaskKanban({ tasks, statuses, pendingTaskIds, editingTas
       onDragCancel={() => setActiveTaskId(null)}
       onDragEnd={handleDragEnd}
     >
-      <div className="ds-kanban-board" aria-label="Kanban board">
-        <p className="ds-meta mb-3">Drag tasks by the grip handle, or change status from the card control.</p>
+      <div className="ds-kanban-board" aria-label="Quadro Kanban">
+        <p className="ds-meta mb-3">Arraste as tarefas pela alça, ou mude o status pelo seletor do cartão.</p>
         <div className="ds-kanban-grid">
           {statuses.map((column) => (
             <KanbanColumn

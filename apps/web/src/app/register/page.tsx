@@ -19,8 +19,10 @@ export default function RegisterPage() {
   return (
     <main className="ds-auth-page flex flex-1 flex-col items-center justify-center gap-5 px-4 py-16 sm:px-6">
       <AuthForm
-        title="Create your account"
-        submitLabel="Create account"
+        title="Crie sua conta"
+        subtitle="Organize seus projetos e tarefas em um só lugar."
+        submitLabel="Criar conta"
+        pendingLabel="Criando conta..."
         fields="register"
         onSubmit={async (values) => {
           await register(
@@ -33,9 +35,9 @@ export default function RegisterPage() {
         }}
       />
       <p className="ds-copy">
-        Already have an account?{" "}
+        Já tem uma conta?{" "}
         <Link className="ds-accent-text font-semibold hover:underline" href="/login">
-          Sign in
+          Entrar
         </Link>
       </p>
     </main>

@@ -110,7 +110,7 @@ async function initializeCsrf(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new ApiError("Unable to initialize the secure session.", response.status);
+    throw new ApiError("Não foi possível iniciar a sessão segura.", response.status);
   }
 }
 
@@ -152,7 +152,7 @@ async function request<T>(
       if (response.status === 401) unauthorizedHandler?.();
 
       throw new ApiError(
-        body?.message ?? "The request could not be completed.",
+        body?.message ?? "Não foi possível concluir a requisição.",
         response.status,
         body?.errors ?? {},
       );
@@ -161,7 +161,7 @@ async function request<T>(
     return (body?.data ?? body) as T;
   }
 
-  throw new ApiError("The request could not be completed.", 419);
+  throw new ApiError("Não foi possível concluir a requisição.", 419);
 }
 
 async function requestBlob(path: string): Promise<Blob> {
@@ -184,7 +184,7 @@ async function requestBlob(path: string): Promise<Blob> {
       if (response.status === 401) unauthorizedHandler?.();
       const body = await response.json().catch(() => undefined);
       throw new ApiError(
-        body?.message ?? "Unable to retrieve this attachment.",
+        body?.message ?? "Não foi possível obter este anexo.",
         response.status,
       );
     }
@@ -192,7 +192,7 @@ async function requestBlob(path: string): Promise<Blob> {
     return response.blob();
   }
 
-  throw new ApiError("Unable to retrieve this attachment.", 419);
+  throw new ApiError("Não foi possível obter este anexo.", 419);
 }
 
 export const api = {

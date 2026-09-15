@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
+import type { Feedback } from "@/lib/feedback";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 type ProjectFormProps = {
@@ -49,7 +50,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         setMessage(error.message);
         setErrors(error.validationErrors);
       } else {
-        setMessage("Unable to save this project.");
+        setMessage("Não foi possível salvar este projeto.");
       }
     } finally {
       setSaving(false);
@@ -60,7 +61,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
     <form className="ds-form grid gap-4" onSubmit={submit}>
       <div>
         <label className="ds-label mb-1" htmlFor="project-name">
-          Name <span className="ds-danger-text">*</span>
+          Nome <span className="ds-danger-text">*</span>
         </label>
         <input
           id="project-name"
@@ -73,23 +74,23 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         {errors.name?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="project-name-error" key={error}>{error}</p>)}
       </div>
       <div>
-        <label className="ds-label mb-1" htmlFor="project-description">Description</label>
+        <label className="ds-label mb-1" htmlFor="project-description">Descrição</label>
         <textarea id="project-description" className="ds-input" value={description} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <div>
-        <label className="ds-label mb-1" htmlFor="project-color">Color</label>
+        <label className="ds-label mb-1" htmlFor="project-color">Cor</label>
         <div className="flex gap-2">
           <input id="project-color" className="ds-color-input" type="color" value={color} onChange={(event) => setColor(event.target.value.toUpperCase())} />
-          <input className="ds-input uppercase" value={color} onChange={(event) => setColor(event.target.value)} pattern="^#[0-9A-Fa-f]{6}$" aria-label="Hex color" />
+          <input className="ds-input uppercase" value={color} onChange={(event) => setColor(event.target.value)} pattern="^#[0-9A-Fa-f]{6}$" aria-label="Cor em hexadecimal" />
         </div>
         {errors.color?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       </div>
       {message && <p className="ds-alert" role="alert">{message}</p>}
       <div className="flex gap-2">
         <button className="ds-button ds-button-primary" disabled={saving} type="submit">
-          {saving ? "Saving..." : project ? "Save changes" : "Create project"}
+          {saving ? "Salvando..." : project ? "Salvar alterações" : "Criar projeto"}
         </button>
-        {onCancel && <button className="ds-button ds-button-secondary" onClick={onCancel} type="button">Cancel</button>}
+        {onCancel && <button className="ds-button ds-button-secondary" onClick={onCancel} type="button">Cancelar</button>}
       </div>
     </form>
   );
@@ -106,7 +107,7 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const mobileSidebarCloseRef = useRef<HTMLButtonElement>(null);
@@ -124,7 +125,7 @@ export default function DashboardPage() {
         const validQueryId = items.some((item) => item.id === queryId);
         setSelectedId(validQueryId ? queryId : items[0]?.id ?? null);
       })
-      .catch(() => setError("Unable to load your projects."))
+      .catch(() => setError("Não foi possível carregar seus projetos."))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -185,7 +186,7 @@ export default function DashboardPage() {
     setSelectedId(project.id);
     setCreating(false);
     setEditing(false);
-    setFeedback("Project saved.");
+    setFeedback({ text: "Projeto salvo.", tone: "success" });
   }
 
   async function removeProject() {
@@ -196,9 +197,9 @@ export default function DashboardPage() {
       const remaining = projects.filter((project) => project.id !== selected.id);
       setProjects(remaining);
       setSelectedId(remaining[0]?.id ?? null);
-      setFeedback("Project deleted.");
+      setFeedback({ text: "Projeto excluído.", tone: "success" });
     } catch {
-      setFeedback("Unable to delete this project.");
+      setFeedback({ text: "Não foi possível excluir este projeto.", tone: "error" });
     } finally {
       setDeletePending(false);
       setDeleteDialogOpen(false);
@@ -215,10 +216,10 @@ export default function DashboardPage() {
     setProjects(next);
     try {
       await api.reorderProjects(next.map((project) => project.id));
-      setFeedback("Project order updated.");
+      setFeedback({ text: "Ordem dos projetos atualizada.", tone: "success" });
     } catch {
       setProjects(previous);
-      setFeedback("Unable to update project order.");
+      setFeedback({ text: "Não foi possível atualizar a ordem dos projetos.", tone: "error" });
     }
   }
 
@@ -233,7 +234,7 @@ export default function DashboardPage() {
               className="ds-icon-button ds-mobile-sidebar-trigger lg:hidden"
               aria-controls="project-navigation"
               aria-expanded={mobileSidebarOpen}
-              aria-label="Open project navigation"
+              aria-label="Abrir navegação de projetos"
               onClick={() => setMobileSidebarOpen(true)}
               type="button"
             >
@@ -249,7 +250,7 @@ export default function DashboardPage() {
             </div>
             <button className="ds-button ds-button-ghost ds-button-compact" onClick={async () => { await logout(); router.replace("/login"); }}>
               <LogOut className="ds-icon-sm" aria-hidden="true" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
@@ -258,7 +259,7 @@ export default function DashboardPage() {
       {mobileSidebarOpen && (
         <button
           className="ds-mobile-sidebar-backdrop lg:hidden"
-          aria-label="Close project navigation"
+          aria-label="Fechar navegação de projetos"
           onClick={() => setMobileSidebarOpen(false)}
           type="button"
         />
@@ -268,26 +269,26 @@ export default function DashboardPage() {
         <aside
           id="project-navigation"
           className={`ds-sidebar ${sidebarCollapsed ? "is-collapsed" : ""} ${mobileSidebarOpen ? "is-mobile-open" : ""}`}
-          aria-label="Project navigation"
+          aria-label="Navegação de projetos"
         >
           <div className="ds-sidebar-header mb-4 flex items-center justify-between gap-2">
-            <h1 className="ds-sidebar-title ds-sidebar-label">Projects</h1>
+            <h1 className="ds-sidebar-title ds-sidebar-label">Projetos</h1>
             <div className="flex items-center gap-1">
               <button
                 className="ds-button ds-button-ghost ds-button-compact ds-sidebar-new"
                 onClick={startCreatingProject}
-                title="New project"
+                title="Novo projeto"
                 type="button"
               >
                 <Plus className="ds-icon-sm" aria-hidden="true" />
-                <span className="ds-sidebar-label">New</span>
+                <span className="ds-sidebar-label">Novo</span>
               </button>
               <button
                 className="ds-icon-button ds-sidebar-collapse hidden lg:inline-grid"
-                aria-label={sidebarCollapsed ? "Expand project navigation" : "Collapse project navigation"}
+                aria-label={sidebarCollapsed ? "Expandir navegação de projetos" : "Recolher navegação de projetos"}
                 aria-expanded={!sidebarCollapsed}
                 onClick={() => setSidebarCollapsed((current) => !current)}
-                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={sidebarCollapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
                 type="button"
               >
                 {sidebarCollapsed
@@ -297,7 +298,7 @@ export default function DashboardPage() {
               <button
                 ref={mobileSidebarCloseRef}
                 className="ds-icon-button ds-sidebar-mobile-close lg:hidden"
-                aria-label="Close project navigation"
+                aria-label="Fechar navegação de projetos"
                 onClick={() => setMobileSidebarOpen(false)}
                 type="button"
               >
@@ -305,15 +306,15 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          {loading && <p className="ds-meta ds-sidebar-label">Loading projects...</p>}
+          {loading && <p className="ds-meta ds-sidebar-label">Carregando projetos...</p>}
           {error && <p className="ds-alert ds-sidebar-label" role="alert">{error}</p>}
           {!loading && !error && projects.length === 0 && (
             <div className="ds-empty ds-sidebar-empty px-2 py-5">
               <FolderPlus className="mx-auto mb-2 h-5 w-5 ds-accent-text" aria-hidden="true" />
-              <p className="ds-copy ds-sidebar-label">No projects yet.</p>
-              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={startCreatingProject} title="Create project">
+              <p className="ds-copy ds-sidebar-label">Nenhum projeto ainda.</p>
+              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={startCreatingProject} title="Criar projeto">
                 <Plus className="ds-icon-sm" aria-hidden="true" />
-                <span className="ds-sidebar-label">Create project</span>
+                <span className="ds-sidebar-label">Criar projeto</span>
               </button>
             </div>
           )}
@@ -335,10 +336,10 @@ export default function DashboardPage() {
                     <span className="ds-project-label truncate">{project.name}</span>
                   </button>
                   <div className="ds-project-actions flex pr-1">
-                    <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)} type="button">
+                    <button className="ds-icon-button" aria-label={`Mover ${project.name} para cima`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)} type="button">
                       <ChevronUp className="ds-icon-sm" aria-hidden="true" />
                     </button>
-                    <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)} type="button">
+                    <button className="ds-icon-button" aria-label={`Mover ${project.name} para baixo`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)} type="button">
                       <ChevronDown className="ds-icon-sm" aria-hidden="true" />
                     </button>
                   </div>
@@ -349,16 +350,16 @@ export default function DashboardPage() {
         </aside>
 
         <section className="ds-workspace">
-          {creating && <><h2 className="ds-page-title mb-6">New project</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
-          {!creating && editing && selected && <><h2 className="ds-page-title mb-6">Edit project</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
+          {creating && <><h2 className="ds-page-title mb-6">Novo projeto</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
+          {!creating && editing && selected && <><h2 className="ds-page-title mb-6">Editar projeto</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
           {!creating && !editing && !selected && (
             <div className="ds-empty py-16">
               <FolderPlus className="mx-auto mb-3 h-6 w-6 ds-accent-text" aria-hidden="true" />
-              <h2 className="ds-empty-title">Choose a project</h2>
-              <p className="ds-copy mt-2">Create your first project to start organizing work.</p>
+              <h2 className="ds-empty-title">Escolha um projeto</h2>
+              <p className="ds-copy mt-2">Crie seu primeiro projeto para começar a organizar o trabalho.</p>
               <button className="ds-button ds-button-primary mt-5" onClick={startCreatingProject}>
                 <Plus className="ds-icon" aria-hidden="true" />
-                New project
+                Novo projeto
               </button>
             </div>
           )}
@@ -370,36 +371,36 @@ export default function DashboardPage() {
                     <span className="h-3.5 w-3.5 shrink-0 rounded-full ring-4 ring-white/5" style={{ backgroundColor: selected.color ?? "#7F8894" }} aria-hidden="true" />
                     <h2 className="ds-page-title">{selected.name}</h2>
                   </div>
-                  <p className="ds-copy mt-2 max-w-2xl">{selected.description || "No description yet."}</p>
+                  <p className="ds-copy mt-2 max-w-2xl">{selected.description || "Sem descrição ainda."}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button className="ds-action-button" onClick={() => setEditing(true)}>
                     <Pencil className="ds-icon-sm" aria-hidden="true" />
-                    Edit
+                    Editar
                   </button>
                   <button className="ds-action-button is-danger" onClick={() => setDeleteDialogOpen(true)}>
                     <Trash2 className="ds-icon-sm" aria-hidden="true" />
-                    Delete
+                    Excluir
                   </button>
                 </div>
               </div>
               <TaskWorkspace key={selected.id} projectId={selected.id} />
             </div>
           )}
-          {feedback && <p className={`ds-feedback mt-5 ${feedback.startsWith("Unable") ? "ds-feedback-error" : ""}`} role="status">{feedback}</p>}
+          {feedback && <p className={`ds-feedback mt-5 ${feedback.tone === "error" ? "ds-feedback-error" : ""}`} role="status">{feedback.text}</p>}
         </section>
       </div>
 
       {deleteDialogOpen && selected && (
         <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
           <div className="ds-modal">
-            <h2 className="ds-modal-title" id="delete-title">Delete &quot;{selected.name}&quot;?</h2>
-            <p className="ds-copy mt-2">This action cannot be undone.</p>
+            <h2 className="ds-modal-title" id="delete-title">Excluir &quot;{selected.name}&quot;?</h2>
+            <p className="ds-copy mt-2">Esta ação não pode ser desfeita.</p>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
-              <button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button>
+              <button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancelar</button>
               <button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>
                 <Trash2 className="ds-icon-sm" aria-hidden="true" />
-                {deletePending ? "Deleting..." : "Delete project"}
+                {deletePending ? "Excluindo..." : "Excluir projeto"}
               </button>
             </div>
           </div>
