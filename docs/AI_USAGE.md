@@ -1,129 +1,129 @@
-# Taskly — AI-Assisted Engineering Log
+# Taskly — Registro de Engenharia Assistida por IA
 
-## Purpose
+## Propósito
 
-Taskly uses AI as an engineering accelerator, not as an autonomous software-development authority.
+O Taskly usa IA como acelerador de engenharia, não como autoridade autônoma de desenvolvimento de software.
 
-AI tools may assist with architecture exploration, implementation, refactoring, automated tests, security review, documentation, and debugging. Every relevant output is subject to human review before it becomes a project decision or is integrated into the codebase.
+Ferramentas de IA podem auxiliar em exploração de arquitetura, implementação, refatoração, testes automatizados, revisão de segurança, documentação e depuração. Todo output relevante passa por revisão humana antes de virar decisão de projeto ou ser integrado ao código.
 
-This document records meaningful AI-assisted work with emphasis on:
+Este documento registra o trabalho assistido por IA que é relevante, com ênfase em:
 
-- engineering context;
-- the prompt/goal;
-- the useful contribution;
-- human review;
-- incorrect, incomplete, or excessive suggestions;
-- the final decision.
+- contexto de engenharia;
+- o prompt/objetivo;
+- a contribuição útil;
+- a revisão humana;
+- sugestões incorretas, incompletas ou excessivas;
+- a decisão final.
 
-The goal is traceability rather than recording every trivial autocomplete.
+O objetivo é rastreabilidade, e não registrar cada autocomplete trivial.
 
 ---
 
-## Logging format
+## Formato de registro
 
-Each relevant interaction uses the following structure:
+Cada interação relevante usa a estrutura abaixo:
 
 ```text
-AI-XXX — Title
-Date:
-Tool/model:
-Goal:
-Prompt/context:
-AI contribution:
-Human review:
-Correction/rejection:
-Final decision:
-Related files/commits:
+AI-XXX — Título
+Data:
+Ferramenta/modelo:
+Objetivo:
+Prompt/contexto:
+Contribuição da IA:
+Revisão humana:
+Correção/rejeição:
+Decisão final:
+Arquivos/commits relacionados:
 ```
 
 ---
 
-## AI-001 — Interpret the technical challenge and define an evaluation strategy
+## AI-001 — Interpretar o desafio técnico e definir uma estratégia de avaliação
 
-**Date:** 2026-09-14  
-**Tool/model:** ChatGPT  
-**Goal:** Analyze the UEX technical challenge before implementation and identify what the submission must demonstrate beyond basic CRUD functionality.
+**Data:** 2026-09-14  
+**Ferramenta/modelo:** ChatGPT  
+**Objetivo:** Analisar o desafio técnico da UEX antes da implementação e identificar o que a entrega precisa demonstrar além de um CRUD básico.
 
-### Prompt/context
+### Prompt/contexto
 
-The challenge document was supplied in full. The requested analysis focused on how to create a submission that performs strongly against the visible evaluation criteria rather than merely satisfying the minimum functional scope.
+O documento do desafio foi fornecido na íntegra. A análise solicitada focou em como construir uma entrega com bom desempenho frente aos critérios de avaliação visíveis, em vez de apenas satisfazer o escopo funcional mínimo.
 
-Relevant context included:
+O contexto relevante incluía:
 
-- the role is senior Fullstack;
-- the challenge is Taskly, a personal task-management system;
-- the delivery window is three calendar days;
-- the company explicitly evaluates functionality, architecture/code quality, AI usage, documentation, technical communication, and work beyond the minimum scope;
-- the submission must include source code, README, technical Spec, prompt records, deployment when possible, and a technical video.
+- a vaga é de Fullstack sênior;
+- o desafio é o Taskly, um sistema pessoal de gestão de tarefas;
+- a janela de entrega é de três dias corridos;
+- a empresa avalia explicitamente funcionalidade, arquitetura/qualidade de código, uso de IA, documentação, comunicação técnica e trabalho além do escopo mínimo;
+- a entrega deve incluir código-fonte, README, Spec técnica, registros de prompts, deploy quando possível e um vídeo técnico.
 
-### AI contribution
+### Contribuição da IA
 
-The analysis recommended treating the project as a production-minded MVP and aligning the engineering process with the scoring model. It highlighted that documentation and AI traceability should be created during development instead of reconstructed retrospectively at the end.
+A análise recomendou tratar o projeto como um MVP com mentalidade de produção e alinhar o processo de engenharia ao modelo de pontuação. Destacou que a documentação e a rastreabilidade de IA deveriam ser criadas durante o desenvolvimento, em vez de reconstruídas retroativamente no final.
 
-It also recommended:
+Também recomendou:
 
-- writing a technical specification before implementation;
-- maintaining architecture decisions in Git;
-- protecting authorization boundaries with automated tests;
-- prioritizing a polished Kanban/list experience;
-- keeping extras focused on product/engineering value instead of feature quantity.
+- escrever uma especificação técnica antes da implementação;
+- manter as decisões de arquitetura no Git;
+- proteger as fronteiras de autorização com testes automatizados;
+- priorizar uma experiência polida de Kanban/lista;
+- manter os extras focados em valor de produto/engenharia, e não em quantidade de funcionalidades.
 
-### Human review
+### Revisão humana
 
-Accepted. The strategy is consistent with the explicit challenge criteria and does not add unsupported product requirements to the mandatory scope.
+Aceita. A estratégia é consistente com os critérios explícitos do desafio e não adiciona requisitos de produto sem respaldo ao escopo obrigatório.
 
-### Correction/rejection
+### Correção/rejeição
 
-None for the high-level evaluation strategy.
+Nenhuma para a estratégia de avaliação em alto nível.
 
-### Final decision
+### Decisão final
 
-Use a spec-driven, traceable development workflow and optimize the submission for completeness, engineering quality, AI review evidence, documentation, and presentation — not raw feature count.
+Usar um fluxo de desenvolvimento spec-driven e rastreável, e otimizar a entrega para completude, qualidade de engenharia, evidência de revisão de IA, documentação e apresentação — não para contagem bruta de funcionalidades.
 
-### Related files/commits
+### Arquivos/commits relacionados
 
 - `docs/SPEC.md`
 
 ---
 
-## AI-002 — Frontend/backend stack exploration and correction
+## AI-002 — Exploração e correção do stack de frontend/backend
 
-**Date:** 2026-09-14  
-**Tool/model:** ChatGPT  
-**Goal:** Select a stack that reflects both the candidate's strongest expertise and technology context disclosed during the recruiting interview.
+**Data:** 2026-09-14  
+**Ferramenta/modelo:** ChatGPT  
+**Objetivo:** Selecionar um stack que reflita tanto a expertise mais forte do candidato quanto o contexto tecnológico revelado durante a entrevista de recrutamento.
 
-### Prompt/context
+### Prompt/contexto
 
-Additional interview context was provided after the initial challenge analysis:
+Contexto adicional da entrevista foi fornecido após a análise inicial do desafio:
 
-- UEX uses React/Next.js frequently;
-- Python is used occasionally;
-- PHP/Laravel is central to the target role;
-- the candidate explicitly told recruiting that PHP is his primary language and Laravel is his strongest backend stack.
+- a UEX usa React/Next.js com frequência;
+- Python é usado ocasionalmente;
+- PHP/Laravel é central para a vaga alvo;
+- o candidato informou explicitamente ao recrutamento que PHP é sua linguagem principal e Laravel é seu stack de backend mais forte.
 
-### AI contribution
+### Contribuição da IA
 
-An intermediate recommendation suggested using Next.js/React/TypeScript as the main fullstack application because of the company's React/Next.js usage.
+Uma recomendação intermediária sugeriu usar Next.js/React/TypeScript como aplicação fullstack principal, em razão do uso de React/Next.js pela empresa.
 
-### Human review
+### Revisão humana
 
-The candidate challenged this recommendation. Removing Laravel would create a mismatch between:
+O candidato contestou essa recomendação. Remover o Laravel criaria um descompasso entre:
 
-- the core of the role;
-- the candidate's stated primary expertise during the interview;
-- the technical narrative presented to evaluators.
+- o núcleo da vaga;
+- a expertise principal declarada pelo candidato durante a entrevista;
+- a narrativa técnica apresentada aos avaliadores.
 
-That feedback materially changed the architecture.
+Esse feedback mudou materialmente a arquitetura.
 
-### Correction/rejection
+### Correção/rejeição
 
-**Rejected:** Next.js replacing Laravel as the main backend/application architecture.
+**Rejeitado:** Next.js substituindo o Laravel como arquitetura principal de backend/aplicação.
 
-The correction was to keep Laravel as the authoritative backend/domain layer and use Next.js/React/TypeScript as a dedicated frontend consuming the Laravel REST API.
+A correção foi manter o Laravel como camada autoritativa de backend/domínio e usar Next.js/React/TypeScript como frontend dedicado consumindo a API REST do Laravel.
 
-Python was deliberately excluded from the MVP because no current Taskly requirement justifies a Python service. Adding it only to demonstrate another language would increase complexity without product value.
+Python foi deliberadamente excluído do MVP porque nenhum requisito atual do Taskly justifica um serviço em Python. Adicioná-lo apenas para demonstrar outra linguagem aumentaria a complexidade sem valor de produto.
 
-### Final decision
+### Decisão final
 
 ```text
 Next.js / React / TypeScript
@@ -136,17 +136,17 @@ Next.js / React / TypeScript
         PostgreSQL
 ```
 
-Responsibilities:
+Responsabilidades:
 
-- Laravel: authentication, authorization, validation, business rules, persistence, uploads, API.
-- Next.js: rendering, navigation, forms, Kanban/list interactions, responsive product experience.
-- PostgreSQL: relational source of truth.
+- Laravel: autenticação, autorização, validação, regras de negócio, persistência, uploads, API.
+- Next.js: renderização, navegação, formulários, interações de Kanban/lista, experiência de produto responsiva.
+- PostgreSQL: fonte de verdade relacional.
 
-### Why this interaction matters
+### Por que esta interação importa
 
-This is an example where AI output was not accepted at face value. Human project/interview context exposed a strategic weakness in the initial recommendation, and the architecture was revised before implementation.
+Este é um exemplo em que o output da IA não foi aceito de imediato. O contexto humano de projeto/entrevista expôs uma fraqueza estratégica na recomendação inicial, e a arquitetura foi revisada antes da implementação.
 
-### Related files/commits
+### Arquivos/commits relacionados
 
 - `docs/SPEC.md`
 - `docs/ARCHITECTURE.md`
@@ -154,111 +154,111 @@ This is an example where AI output was not accepted at face value. Human project
 
 ---
 
-## AI-003 — Draft the pre-implementation technical specification
+## AI-003 — Redigir a especificação técnica pré-implementação
 
-**Date:** 2026-09-14  
-**Tool/model:** ChatGPT with GitHub integration  
-**Goal:** Convert the challenge requirements and agreed architecture into an implementation-ready technical specification before framework bootstrapping.
+**Data:** 2026-09-14  
+**Ferramenta/modelo:** ChatGPT com integração ao GitHub  
+**Objetivo:** Converter os requisitos do desafio e a arquitetura acordada em uma especificação técnica pronta para implementação, antes do bootstrap dos frameworks.
 
-### Prompt/context
+### Prompt/contexto
 
-The specification needed to preserve the challenge's mandatory scope:
+A especificação precisava preservar o escopo obrigatório do desafio:
 
-- own e-mail/password authentication;
-- projects;
-- tasks per project;
-- title;
-- short description;
-- full description;
-- deadline with date/time;
+- autenticação própria por e-mail/senha;
+- projetos;
+- tarefas por projeto;
+- título;
+- descrição curta;
+- descrição completa;
+- prazo com data/hora;
 - tags;
-- attachments/photos;
-- editable task fields;
-- list and Kanban views;
-- statuses: not started, in progress, completed, cancelled.
+- anexos/fotos;
+- campos de tarefa editáveis;
+- visualizações em lista e Kanban;
+- status: não iniciada, em andamento, concluída, cancelada.
 
-The spec was also asked to document authorization, validation, testing, non-functional requirements, non-goals, and Definition of Done without installing Laravel or Next.js yet.
+Também foi pedido que a spec documentasse autorização, validação, testes, requisitos não funcionais, não-objetivos e Definition of Done, ainda sem instalar Laravel ou Next.js.
 
-### AI contribution
+### Contribuição da IA
 
-Generated the initial `docs/SPEC.md` and separated:
+Gerou o `docs/SPEC.md` inicial e separou:
 
-- mandatory requirements;
-- proposed implementation decisions;
-- non-goals;
+- requisitos obrigatórios;
+- decisões de implementação propostas;
+- não-objetivos;
 - stretch goals;
-- security/authorization requirements;
-- test strategy.
+- requisitos de segurança/autorização;
+- estratégia de testes.
 
-### Human review
+### Revisão humana
 
-The document is intended to be reviewed continuously against implementation. Proposed fields such as activity history are explicitly marked as stretch goals rather than silently presented as challenge requirements.
+O documento deve ser revisado continuamente frente à implementação. Campos propostos como histórico de atividades estão explicitamente marcados como stretch goals, em vez de apresentados silenciosamente como requisitos do desafio.
 
-### Correction/rejection
+### Correção/rejeição
 
-No framework code was generated at this stage. This was deliberate: the specification and architecture must precede framework-driven implementation choices in the repository history.
+Nenhum código de framework foi gerado nesta etapa. Isso foi deliberado: a especificação e a arquitetura precisam preceder, no histórico do repositório, as escolhas de implementação orientadas pelo framework.
 
-### Final decision
+### Decisão final
 
-The repository begins with documentation/specification commits. Framework bootstrapping follows only after the initial decisions are visible and reviewable.
+O repositório começa com commits de documentação/especificação. O bootstrap dos frameworks só vem depois que as decisões iniciais estão visíveis e revisáveis.
 
-### Related files/commits
+### Arquivos/commits relacionados
 
 - `docs/SPEC.md`
 - commit `606b57e` — `docs: define Taskly product and technical specification`
 
 ---
 
-## Review policy for future AI-generated code
+## Política de revisão para código gerado por IA
 
-Before AI-generated or AI-modified code is accepted, review should consider the relevant items below:
+Antes de aceitar código gerado ou modificado por IA, a revisão deve considerar os itens relevantes abaixo:
 
-### Correctness
+### Correção
 
-- Does the code implement the stated requirement?
-- Does it introduce behavior that was not requested?
-- Are edge cases handled deliberately?
+- O código implementa o requisito declarado?
+- Ele introduz comportamento que não foi solicitado?
+- Os casos de borda são tratados deliberadamente?
 
-### Security
+### Segurança
 
-- Is authentication required where expected?
-- Is authorization performed server-side?
-- Can resource IDs be changed to access another user's data?
-- Are nested resources scoped to their parents?
-- Are uploads safely validated?
-- Are secrets or unsafe defaults introduced?
+- A autenticação é exigida onde se espera?
+- A autorização é feita no servidor?
+- IDs de recurso podem ser trocados para acessar dados de outro usuário?
+- Recursos aninhados estão delimitados aos seus pais?
+- Uploads são validados com segurança?
+- Segredos ou defaults inseguros foram introduzidos?
 
 ### Laravel
 
-- Are Eloquent queries properly scoped?
-- Is mass assignment controlled?
-- Are Form Requests/Policies used where they improve clarity?
-- Are transactions needed?
-- Are relationships/eager loading correct?
-- Is framework functionality being reimplemented unnecessarily?
+- As queries Eloquent estão corretamente delimitadas?
+- O mass assignment está controlado?
+- Form Requests/Policies são usados onde melhoram a clareza?
+- Transações são necessárias?
+- Relacionamentos/eager loading estão corretos?
+- Funcionalidade do framework está sendo reimplementada sem necessidade?
 
 ### React / Next.js
 
-- Is client state actually necessary?
-- Are Client Components limited to interactive boundaries where practical?
-- Are unnecessary rerenders/effects introduced?
-- Does optimistic UI have a failure/rollback path?
-- Are API error/loading states represented?
+- O estado no cliente é realmente necessário?
+- Os Client Components estão limitados às fronteiras interativas, onde for prático?
+- Rerenders/effects desnecessários foram introduzidos?
+- A optimistic UI tem caminho de falha/rollback?
+- Estados de erro/carregamento da API estão representados?
 
-### Tests
+### Testes
 
-- Do generated tests assert meaningful behavior rather than implementation details?
-- Do authorization tests attempt cross-user access?
-- Could a generated test pass while the actual requirement remains broken?
+- Os testes gerados verificam comportamento relevante, e não detalhes de implementação?
+- Os testes de autorização tentam acesso entre usuários?
+- Um teste gerado poderia passar enquanto o requisito real segue quebrado?
 
-### Architecture
+### Arquitetura
 
-- Does the proposed abstraction solve a real current problem?
-- Is complexity being added only because the AI recognizes a pattern?
-- Is there a simpler Laravel/React-native solution?
+- A abstração proposta resolve um problema real e atual?
+- Complexidade está sendo adicionada apenas porque a IA reconhece um padrão?
+- Existe uma solução mais simples e nativa de Laravel/React?
 
 ---
 
-## Principle
+## Princípio
 
-> AI can propose code and decisions. The developer remains responsible for understanding, validating, correcting, testing, and owning the final result.
+> A IA pode propor código e decisões. O desenvolvedor permanece responsável por entender, validar, corrigir, testar e assumir o resultado final.

@@ -1,47 +1,47 @@
-# ADR-005 — Store task attachments in private Laravel storage
+# ADR-005 — Armazenar anexos de tarefas em storage privado do Laravel
 
 ## Status
 
-Accepted.
+Aceito.
 
-## Date
+## Data
 
 2026-09-15
 
-## Context
+## Contexto
 
-Task attachments contain user-owned private data. Taskly runs Laravel and Next.js as separate applications, and files must not bypass Laravel's ownership checks through a predictable public URL.
+Anexos de tarefas contêm dados privados do usuário. O Taskly executa Laravel e Next.js como aplicações separadas, e os arquivos não podem contornar as verificações de propriedade do Laravel através de uma URL pública previsível.
 
-The technical challenge also needs a storage design that remains straightforward to run locally and deploy without introducing cloud infrastructure prematurely.
+O desafio técnico também precisa de um desenho de storage que continue simples de rodar localmente e de publicar, sem introduzir infraestrutura de nuvem prematuramente.
 
-## Decision
+## Decisão
 
-Laravel will store Task attachments on a dedicated private filesystem disk rooted below `storage/app/private/task-attachments`, outside the public web root.
+O Laravel armazenará os anexos de Task em um disco de filesystem privado dedicado, com raiz abaixo de `storage/app/private/task-attachments`, fora do web root público.
 
-The database stores attachment metadata and a server-generated storage path. The original client filename is retained only as display/download metadata and never determines the stored filename.
+O banco armazena os metadados do anexo e um caminho de storage gerado pelo servidor. O nome de arquivo original do cliente é mantido apenas como metadado de exibição/download e nunca determina o nome do arquivo armazenado.
 
-Authenticated Laravel controller endpoints authorize access through `Attachment -> Task -> Project -> User`. Supported images may be streamed inline; other supported documents are forced to download. No endpoint redirects to a public filesystem URL or exposes the internal storage path.
+Endpoints autenticados de controller do Laravel autorizam o acesso através de `Attachment -> Task -> Project -> User`. Imagens suportadas podem ser transmitidas inline; os demais documentos suportados são forçados a download. Nenhum endpoint redireciona para uma URL pública de filesystem nem expõe o caminho interno de storage.
 
-Application-level deletion removes physical files before deleting an Attachment, Task, or Project record. This is explicit because database cascades cannot remove filesystem objects.
+A exclusão em nível de aplicação remove os arquivos físicos antes de apagar um registro de Attachment, Task ou Project. Isso é explícito porque cascatas de banco de dados não removem objetos do filesystem.
 
-The implementation uses Laravel's `Storage` facade so a future move to an S3-compatible private disk can preserve the application boundary.
+A implementação usa a facade `Storage` do Laravel, de modo que uma migração futura para um disco privado compatível com S3 possa preservar a fronteira da aplicação.
 
-## Consequences
+## Consequências
 
-### Positive
+### Positivas
 
-- attachment authorization remains centralized in Laravel;
-- files have no public or predictable URL;
-- local and challenge deployment remain simple;
-- generated paths avoid trusting client filenames;
-- the filesystem abstraction leaves a practical path to object storage.
+- a autorização de anexos permanece centralizada no Laravel;
+- os arquivos não têm URL pública nem previsível;
+- o ambiente local e o deploy do desafio permanecem simples;
+- os caminhos gerados evitam confiar em nomes de arquivo do cliente;
+- a abstração de filesystem deixa um caminho prático para object storage.
 
 ### Trade-offs
 
-- Laravel serves attachment responses and therefore handles their bandwidth;
-- production deployment must persist the private storage directory;
-- a multi-instance deployment would eventually require shared or object storage.
+- o Laravel serve as respostas de anexo e, portanto, arca com a banda delas;
+- o deploy em produção precisa persistir o diretório de storage privado;
+- um deploy com múltiplas instâncias acabaria exigindo storage compartilhado ou de objetos.
 
-## Review trigger
+## Gatilho de revisão
 
-Revisit when Taskly moves to multiple application instances, attachment traffic materially affects Laravel capacity, or deployment provides a private object-storage service.
+Revisitar quando o Taskly passar a rodar em múltiplas instâncias de aplicação, quando o tráfego de anexos afetar materialmente a capacidade do Laravel, ou quando o deploy oferecer um serviço privado de object storage.

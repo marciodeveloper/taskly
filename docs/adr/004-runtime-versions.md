@@ -1,76 +1,76 @@
-# ADR-004 — Pin the initial runtime version baseline
+# ADR-004 — Fixar a linha de base inicial de versões de runtime
 
 ## Status
 
-Accepted.
+Aceito.
 
-## Date
+## Data
 
 2026-09-14
 
-## Context
+## Contexto
 
-Taskly should use current supported stable runtimes without relying on beta/current-only releases during a short technical challenge.
+O Taskly deve usar runtimes estáveis e atualmente suportados, sem depender de releases beta ou "current-only" durante um desafio técnico curto.
 
-The selected baseline was checked against official framework/runtime release documentation immediately before bootstrap.
+A linha de base escolhida foi conferida na documentação oficial de release dos frameworks/runtimes imediatamente antes do bootstrap.
 
-## Decision
+## Decisão
 
-Initial runtime baseline:
+Linha de base inicial de runtime:
 
 - PHP `8.5.x`
 - Laravel `13.x`
 - Node.js `24.x` LTS
-- Next.js `16.3.3` or newer compatible `16.3.x` security patch
-- PostgreSQL `18.6` / PostgreSQL `18.x` supported patch line
+- Next.js `16.3.3` ou patch de segurança `16.3.x` compatível mais recente
+- PostgreSQL `18.6` / linha de patch suportada do PostgreSQL `18.x`
 
-Lockfiles and container definitions will capture the actual resolved versions used by the project.
+Os lockfiles e as definições de container registram as versões efetivamente resolvidas pelo projeto.
 
-## Rationale
+## Justificativa
 
 ### Laravel 13
 
-Laravel 13 is the current stable major framework release and supports PHP 8.3 through 8.5. Using it demonstrates current Laravel practices without choosing a preview release.
+O Laravel 13 é o release major estável atual e suporta PHP 8.3 a 8.5. Usá-lo demonstra práticas atuais de Laravel sem escolher um release de preview.
 
 ### PHP 8.5
 
-PHP 8.5 is supported by Laravel 13 and matches the current Laravel installation guidance. The project will run PHP inside containers, reducing dependence on the VPS host PHP version.
+O PHP 8.5 é suportado pelo Laravel 13 e corresponde à orientação atual de instalação do Laravel. O projeto executa o PHP dentro de containers, o que reduz a dependência da versão de PHP do host da VPS.
 
 ### Next.js 16.3.x
 
-Next.js 16.3 is the active supported line selected for the frontend. The baseline must include the current security patch rather than an older vulnerable patch level.
+O Next.js 16.3 é a linha suportada ativa escolhida para o frontend. A linha de base deve incluir o patch de segurança atual, e não um nível de patch antigo e vulnerável.
 
 ### Node.js 24 LTS
 
-Node.js 24 is an LTS release. Node.js 26 is current rather than LTS at the time of this decision, so Node 24 is preferred for a production-minded technical challenge.
+O Node.js 24 é um release LTS. O Node.js 26 é "current" e não LTS no momento desta decisão, então o Node 24 é preferível para um desafio técnico com mentalidade de produção.
 
 ### PostgreSQL 18
 
-PostgreSQL 18 is the current stable major line. Patch releases should remain current, especially when upstream releases include security fixes.
+O PostgreSQL 18 é a linha major estável atual. Os releases de patch devem permanecer atualizados, especialmente quando o upstream inclui correções de segurança.
 
-## Consequences
+## Consequências
 
-### Positive
+### Positivas
 
-- current supported framework/runtime capabilities;
-- avoids intentionally starting on end-of-life versions;
-- Docker makes the baseline reproducible independently of the VPS host packages;
-- patch-level security updates can be applied without changing the architectural decision.
+- capacidades atuais e suportadas de framework/runtime;
+- evita começar deliberadamente em versões em fim de vida;
+- o Docker torna a linha de base reproduzível independentemente dos pacotes do host da VPS;
+- atualizações de segurança em nível de patch podem ser aplicadas sem alterar a decisão arquitetural.
 
 ### Trade-offs
 
-- Laravel 13 may differ from older Laravel versions the candidate has previously used and therefore requires version-aware review rather than relying on memory;
-- Next.js 16 behavior must be checked against version-matched documentation;
-- using current majors may expose ecosystem packages that have not kept pace, so dependencies should remain minimal.
+- o Laravel 13 pode diferir de versões mais antigas do Laravel já usadas pelo candidato e, portanto, exige revisão consciente da versão em vez de confiança na memória;
+- o comportamento do Next.js 16 precisa ser conferido contra a documentação da versão correspondente;
+- usar majors atuais pode expor pacotes do ecossistema que não acompanharam o ritmo, então as dependências devem permanecer mínimas.
 
 ## Guardrails
 
-- Do not add packages merely because they are familiar from older Laravel/Next.js projects.
-- Verify package compatibility with the pinned major versions before installation.
-- Prefer framework-native functionality where it meets the requirement.
-- Apply security patch updates within the selected major/minor line when available.
-- AI-generated code must be reviewed against the actual installed versions, not generic or stale framework knowledge.
+- Não adicionar pacotes só por serem familiares de projetos Laravel/Next.js mais antigos.
+- Verificar a compatibilidade do pacote com as versões major fixadas antes de instalar.
+- Preferir funcionalidade nativa do framework quando ela atender ao requisito.
+- Aplicar atualizações de patch de segurança dentro da linha major/minor escolhida quando disponíveis.
+- Código gerado por IA deve ser revisado contra as versões efetivamente instaladas, não contra conhecimento genérico ou desatualizado do framework.
 
-## Review trigger
+## Gatilho de revisão
 
-Revisit only if a required dependency is incompatible, a security advisory requires a major/minor change, or the deployment platform imposes a concrete runtime constraint.
+Revisitar apenas se uma dependência necessária for incompatível, se um aviso de segurança exigir mudança de major/minor, ou se a plataforma de deploy impuser uma restrição concreta de runtime.

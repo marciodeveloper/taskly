@@ -1,111 +1,111 @@
-# ADR-003 — Use Laravel Sanctum for first-party authentication
+# ADR-003 — Usar Laravel Sanctum para autenticação first-party
 
 ## Status
 
-Accepted, with deployment details to be finalized during environment bootstrap.
+Aceito, com os detalhes de deploy a serem finalizados durante o bootstrap do ambiente.
 
-## Context
+## Contexto
 
-Taskly requires:
+O Taskly exige:
 
-- own e-mail/password registration;
+- cadastro próprio por e-mail/senha;
 - login;
-- persistent authenticated sessions;
+- sessões autenticadas persistentes;
 - logout;
-- a Next.js first-party frontend;
-- a Laravel backend API.
+- um frontend Next.js first-party;
+- uma API backend em Laravel.
 
-There is no requirement for third-party OAuth or for issuing portable access tokens to external clients.
+Não há requisito de OAuth de terceiros nem de emissão de tokens de acesso portáveis para clientes externos.
 
-## Decision
+## Decisão
 
-Use Laravel Sanctum with stateful browser authentication based on Laravel sessions and secure HTTP-only cookies.
+Usar o Laravel Sanctum com autenticação stateful de navegador, baseada em sessões do Laravel e cookies seguros HTTP-only.
 
-The frontend will authenticate against Laravel as a first-party client.
+O frontend se autenticará no Laravel como cliente first-party.
 
-Expected flow:
+Fluxo esperado:
 
-1. frontend initializes CSRF protection;
-2. registration/login request is sent to Laravel;
-3. Laravel creates the authenticated session;
-4. browser stores the session cookie according to secure cookie policy;
-5. subsequent API calls rely on the authenticated session;
-6. logout invalidates the server-side session.
+1. o frontend inicializa a proteção CSRF;
+2. a requisição de cadastro/login é enviada ao Laravel;
+3. o Laravel cria a sessão autenticada;
+4. o navegador armazena o cookie de sessão conforme a política de cookies seguros;
+5. as chamadas de API seguintes se apoiam na sessão autenticada;
+6. o logout invalida a sessão no servidor.
 
-## Security properties
+## Propriedades de segurança
 
-- Password hashing uses Laravel framework defaults.
-- Authentication state is not stored as a custom JWT in browser local storage.
-- CSRF protection remains enabled.
-- Cookies use secure settings in production.
-- Authorization is still evaluated independently for each protected resource.
-- Authentication alone never implies ownership of a project/task.
+- O hash de senha usa os padrões do framework Laravel.
+- O estado de autenticação não é armazenado como um JWT próprio no local storage do navegador.
+- A proteção CSRF permanece habilitada.
+- Os cookies usam configurações seguras em produção.
+- A autorização continua sendo avaliada de forma independente para cada recurso protegido.
+- Estar autenticado nunca implica, por si só, ser dono de um project/task.
 
-## Local/deployment topology
+## Topologia local e de deploy
 
-Exact values will be finalized when the runtime is bootstrapped, including:
+Os valores exatos serão finalizados quando o runtime for provisionado, incluindo:
 
-- frontend origin;
-- API origin;
+- origem do frontend;
+- origem da API;
 - `SANCTUM_STATEFUL_DOMAINS`;
 - `SESSION_DOMAIN`;
-- CORS allowed origins;
-- HTTPS/secure-cookie behavior;
-- local development ports.
+- origens permitidas em CORS;
+- comportamento de HTTPS/cookies seguros;
+- portas de desenvolvimento local.
 
-The preferred deployment is to keep frontend and API under the same registrable parent domain when practical, for example:
+O deploy preferencial é manter frontend e API sob o mesmo domínio pai registrável quando for prático, por exemplo:
 
 ```text
 app.example.com
 api.example.com
 ```
 
-or to reverse-proxy them under a topology that preserves straightforward first-party session behavior.
+ou colocá-los atrás de um reverse proxy em uma topologia que preserve o comportamento direto de sessão first-party.
 
-## Consequences
+## Consequências
 
-### Positive
+### Positivas
 
-- native Laravel authentication model;
-- secure HTTP-only session cookie;
-- CSRF protection is explicit;
-- no custom token refresh/revocation protocol;
-- reduced exposure compared with storing bearer JWTs in browser-accessible storage;
-- well suited to a first-party browser application.
+- modelo de autenticação nativo do Laravel;
+- cookie de sessão seguro e HTTP-only;
+- proteção CSRF explícita;
+- nenhum protocolo próprio de refresh/revogação de token;
+- exposição reduzida em comparação a armazenar JWTs bearer em storage acessível pelo navegador;
+- adequado a uma aplicação de navegador first-party.
 
 ### Trade-offs
 
-- CORS, cookie domains, same-site policy, and stateful domains must be configured carefully;
-- local development uses separate frontend/backend origins and requires deliberate environment configuration;
-- future third-party/mobile API clients may need a different token strategy.
+- CORS, domínios de cookie, política same-site e stateful domains precisam ser configurados com cuidado;
+- o desenvolvimento local usa origens distintas para frontend e backend e exige configuração de ambiente deliberada;
+- futuros clientes de API de terceiros ou mobile podem exigir uma estratégia de token diferente.
 
-## Alternatives considered
+## Alternativas consideradas
 
-### Custom JWT authentication
+### Autenticação com JWT próprio
 
-Rejected for the current product. It adds token issuance, storage, rotation/revocation, refresh behavior, and security decisions without a requirement that justifies the additional complexity.
+Rejeitada para o produto atual. Adiciona emissão, armazenamento, rotação/revogação e refresh de token, além de decisões de segurança, sem um requisito que justifique a complexidade adicional.
 
-### NextAuth/Auth.js as the primary authentication authority
+### NextAuth/Auth.js como autoridade primária de autenticação
 
-Rejected because Laravel is the authoritative backend/domain layer and should own user authentication for this architecture.
+Rejeitada porque o Laravel é a camada autoritativa de backend/domínio e deve ser dono da autenticação de usuários nesta arquitetura.
 
-### OAuth-only authentication
+### Autenticação apenas via OAuth
 
-Rejected because the technical challenge explicitly requires own e-mail/password authentication and does not require Google or Microsoft integration.
+Rejeitada porque o desafio técnico exige explicitamente autenticação própria por e-mail/senha e não requer integração com Google ou Microsoft.
 
-## Testing expectations
+## Expectativas de teste
 
-Automated coverage should verify at minimum:
+A cobertura automatizada deve verificar, no mínimo:
 
-- successful registration;
-- duplicate e-mail validation;
-- valid login;
-- invalid credentials;
-- authenticated session access;
-- unauthenticated rejection;
-- logout/session invalidation;
-- cross-user authorization remains blocked after authentication.
+- cadastro bem-sucedido;
+- validação de e-mail duplicado;
+- login válido;
+- credenciais inválidas;
+- acesso com sessão autenticada;
+- rejeição de acesso não autenticado;
+- logout/invalidação de sessão;
+- autorização entre usuários permanece bloqueada após a autenticação.
 
-## Review trigger
+## Gatilho de revisão
 
-Revisit only if deployment infrastructure prevents reliable first-party cookie authentication or if future product requirements add external/mobile clients that materially benefit from token-based API authentication.
+Revisitar apenas se a infraestrutura de deploy impedir autenticação confiável por cookie first-party, ou se requisitos futuros de produto adicionarem clientes externos/mobile que se beneficiem materialmente de autenticação de API baseada em token.

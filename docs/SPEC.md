@@ -1,217 +1,217 @@
-# Taskly — Product & Technical Specification
+# Taskly — Especificação de Produto e Técnica
 
-## 1. Overview
+## 1. Visão geral
 
-Taskly is a personal task-management web application built for the UEX technical selection challenge. The product allows each authenticated user to create and organize projects, manage tasks inside those projects, switch between list and Kanban views, and track task status, deadlines, tags, and attachments.
+O Taskly é uma aplicação web de gestão pessoal de tarefas, construída para o desafio técnico de seleção da UEX. O produto permite que cada usuário autenticado crie e organize projetos, gerencie tarefas dentro desses projetos, alterne entre as visualizações de lista e Kanban, e acompanhe status, prazos, tags e anexos das tarefas.
 
-This specification is intentionally written before framework bootstrapping so the implementation can follow a clear, reviewable, spec-driven process.
+Esta especificação foi escrita intencionalmente antes do bootstrap dos frameworks, para que a implementação siga um processo spec-driven claro e revisável.
 
-## 2. Product goals
+## 2. Objetivos de produto
 
-- Deliver the complete minimum scope requested by the challenge without critical defects.
-- Provide a polished, responsive user experience that feels like a real product rather than a CRUD demo.
-- Keep a clear technical boundary between frontend and backend responsibilities.
-- Demonstrate secure authorization, validation, maintainable architecture, automated testing, and traceable AI-assisted development.
-- Make the application easy to run locally and straightforward to deploy.
+- Entregar o escopo mínimo completo solicitado pelo desafio, sem defeitos críticos.
+- Oferecer uma experiência polida e responsiva, que pareça um produto real e não uma demo de CRUD.
+- Manter uma fronteira técnica clara entre as responsabilidades de frontend e backend.
+- Demonstrar autorização segura, validação, arquitetura manutenível, testes automatizados e desenvolvimento assistido por IA com rastreabilidade.
+- Tornar a aplicação fácil de rodar localmente e direta de publicar.
 
-## 3. Non-goals for the MVP
+## 3. Não-objetivos do MVP
 
-The following capabilities are intentionally outside the initial scope unless time remains after the required experience is complete and stable:
+As capacidades a seguir estão intencionalmente fora do escopo inicial, a menos que sobre tempo depois que a experiência obrigatória estiver completa e estável:
 
-- Multi-user collaboration inside the same project.
-- Team workspaces, roles, or organization management.
-- Google or Microsoft OAuth.
-- Realtime multi-user synchronization.
-- Chat, comments, mentions, or notifications.
-- Native mobile applications.
-- AI features inside the end-user product.
-- Complex reporting or analytics dashboards.
+- Colaboração multiusuário dentro de um mesmo projeto.
+- Workspaces de equipe, papéis ou gestão de organização.
+- OAuth do Google ou da Microsoft.
+- Sincronização multiusuário em tempo real.
+- Chat, comentários, menções ou notificações.
+- Aplicativos móveis nativos.
+- Funcionalidades de IA dentro do produto para o usuário final.
+- Dashboards complexos de relatórios ou analytics.
 
-These items may be documented as future evolution, but they must not compromise delivery of the required scope.
+Esses itens podem ser documentados como evolução futura, mas não podem comprometer a entrega do escopo obrigatório.
 
-## 4. Target architecture
+## 4. Arquitetura alvo
 
-The application will use a monorepo with two primary applications:
+A aplicação usará um monorepo com duas aplicações principais:
 
-- `apps/api`: PHP/Laravel backend responsible for authentication, authorization, validation, business rules, persistence, uploads, and the REST API.
-- `apps/web`: Next.js/React/TypeScript frontend responsible for rendering, navigation, forms, list/Kanban interactions, optimistic UI, and overall user experience.
+- `apps/api`: backend PHP/Laravel responsável por autenticação, autorização, validação, regras de negócio, persistência, uploads e a API REST.
+- `apps/web`: frontend Next.js/React/TypeScript responsável por renderização, navegação, formulários, interações de lista/Kanban, optimistic UI e a experiência do usuário como um todo.
 
-PostgreSQL is the source of truth for persisted application data.
+O PostgreSQL é a fonte de verdade dos dados persistidos da aplicação.
 
-The frontend must not connect directly to PostgreSQL. All domain operations go through the Laravel application.
+O frontend não deve se conectar diretamente ao PostgreSQL. Todas as operações de domínio passam pela aplicação Laravel.
 
-## 5. Core user journeys
+## 5. Jornadas principais do usuário
 
-### 5.1 Registration and authentication
+### 5.1 Cadastro e autenticação
 
-A visitor can:
+Um visitante pode:
 
-1. Open the registration page.
-2. Register with name, e-mail, and password.
-3. Become authenticated after successful registration.
-4. Log out.
-5. Return later and log in using e-mail and password.
-6. Keep an authenticated session according to the configured session lifetime.
+1. Abrir a página de cadastro.
+2. Cadastrar-se com nome, e-mail e senha.
+3. Ficar autenticado após o cadastro bem-sucedido.
+4. Sair da conta.
+5. Voltar depois e entrar usando e-mail e senha.
+6. Manter uma sessão autenticada conforme o tempo de vida de sessão configurado.
 
-OAuth is not required.
+OAuth não é obrigatório.
 
-### 5.2 Project management
+### 5.2 Gestão de projetos
 
-An authenticated user can:
+Um usuário autenticado pode:
 
-1. View their projects.
-2. Create a new project.
-3. Rename/edit a project.
-4. Organize multiple projects.
-5. Select a project and see only tasks belonging to that project.
-6. Delete a project after explicit confirmation.
+1. Ver seus projetos.
+2. Criar um novo projeto.
+3. Renomear/editar um projeto.
+4. Organizar múltiplos projetos.
+5. Selecionar um projeto e ver apenas as tarefas pertencentes a ele.
+6. Excluir um projeto após confirmação explícita.
 
-A user must never be able to read or modify another user's projects.
+Um usuário nunca pode ler ou modificar os projetos de outro usuário.
 
-### 5.3 Task management
+### 5.3 Gestão de tarefas
 
-Inside a project, an authenticated user can create a task with:
+Dentro de um projeto, um usuário autenticado pode criar uma tarefa com:
 
-- title;
-- short description;
-- full description;
-- deadline containing date and time;
+- título;
+- descrição curta;
+- descrição completa;
+- prazo contendo data e hora;
 - tags;
-- attachments and/or photos;
+- anexos e/ou fotos;
 - status.
 
-Every task field must remain editable after creation.
+Todo campo da tarefa deve continuar editável depois da criação.
 
-The allowed statuses are:
+Os status permitidos são:
 
 - `not_started` — Não iniciada;
 - `in_progress` — Em andamento;
 - `completed` — Concluída;
 - `cancelled` — Cancelada.
 
-The user can update the task status at any time.
+O usuário pode atualizar o status da tarefa a qualquer momento.
 
-### 5.4 List and Kanban views
+### 5.4 Visualizações de lista e Kanban
 
-For a selected project, the user can switch between:
+Para um projeto selecionado, o usuário pode alternar entre:
 
-- List view;
-- Kanban view.
+- visualização em Lista;
+- visualização em Kanban.
 
-A visible toggle controls the active view.
+Um controle visível comanda a visualização ativa.
 
-Kanban columns map to the four task statuses. Moving a card between columns updates its status. Reordering within a column may persist task position if included in the implementation.
+As colunas do Kanban mapeiam os quatro status de tarefa. Mover um cartão entre colunas atualiza seu status. Reordenar dentro de uma coluna pode persistir a posição da tarefa, se isso for incluído na implementação.
 
-## 6. Functional requirements
+## 6. Requisitos funcionais
 
-### FR-001 — Registration
+### FR-001 — Cadastro
 
-The system shall allow account creation using e-mail and password without mandatory third-party authentication.
+O sistema deve permitir a criação de conta usando e-mail e senha, sem autenticação de terceiros obrigatória.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- e-mail must be unique;
-- password must satisfy the configured minimum requirements;
-- invalid input returns field-level validation feedback;
-- successful registration creates exactly one user account;
-- the password is never stored in plain text.
+- o e-mail deve ser único;
+- a senha deve satisfazer os requisitos mínimos configurados;
+- entradas inválidas retornam feedback de validação por campo;
+- um cadastro bem-sucedido cria exatamente uma conta de usuário;
+- a senha nunca é armazenada em texto puro.
 
-### FR-002 — Login and persistent session
+### FR-002 — Login e sessão persistente
 
-The system shall authenticate an existing user using e-mail and password and maintain a secure session.
+O sistema deve autenticar um usuário existente usando e-mail e senha e manter uma sessão segura.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- valid credentials create an authenticated session;
-- invalid credentials do not expose whether an account exists beyond safe validation messaging;
-- authenticated routes reject unauthenticated requests;
-- logout invalidates the active session.
+- credenciais válidas criam uma sessão autenticada;
+- credenciais inválidas não revelam se uma conta existe, além de mensagens de validação seguras;
+- rotas autenticadas rejeitam requisições não autenticadas;
+- o logout invalida a sessão ativa.
 
-### FR-003 — Project CRUD
+### FR-003 — CRUD de projetos
 
-The user shall be able to create, list, edit, organize, and delete their own projects.
+O usuário deve poder criar, listar, editar, organizar e excluir seus próprios projetos.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- projects are always scoped to the authenticated user;
-- project names are required;
-- project deletion requires explicit confirmation in the UI;
-- deleting a project handles associated tasks according to the database relationship strategy.
+- projetos são sempre delimitados ao usuário autenticado;
+- o nome do projeto é obrigatório;
+- a exclusão de projeto exige confirmação explícita na interface;
+- excluir um projeto trata as tarefas associadas conforme a estratégia de relacionamento do banco.
 
-### FR-004 — Task CRUD
+### FR-004 — CRUD de tarefas
 
-The user shall be able to create, read, edit, and delete tasks belonging to their own projects.
+O usuário deve poder criar, ler, editar e excluir tarefas pertencentes aos seus próprios projetos.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- title is required;
-- short description supports concise summary text;
-- full description supports longer content;
-- deadline accepts date and time;
-- status must be one of the four allowed values;
-- all fields can be edited after task creation;
-- project ownership is enforced for every task operation.
+- o título é obrigatório;
+- a descrição curta suporta um texto de resumo conciso;
+- a descrição completa suporta conteúdo mais longo;
+- o prazo aceita data e hora;
+- o status deve ser um dos quatro valores permitidos;
+- todos os campos podem ser editados após a criação da tarefa;
+- a propriedade do projeto é verificada em toda operação de tarefa.
 
 ### FR-005 — Tags
 
-The user shall be able to assign one or more tags to a task.
+O usuário deve poder atribuir uma ou mais tags a uma tarefa.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- a task may have multiple tags;
-- tags presented to the user are scoped appropriately to that user;
-- assigning a tag owned by another user is not allowed.
+- uma tarefa pode ter múltiplas tags;
+- as tags apresentadas ao usuário são adequadamente delimitadas a ele;
+- atribuir uma tag pertencente a outro usuário não é permitido.
 
-### FR-006 — Attachments and photos
+### FR-006 — Anexos e fotos
 
-The user shall be able to attach supported files and/or images to a task.
+O usuário deve poder anexar arquivos e/ou imagens suportados a uma tarefa.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- uploads are validated for allowed MIME types and maximum size;
-- stored filenames must not rely on unsafe user-provided paths;
-- users can access only attachments belonging to tasks they are authorized to access;
-- attachments can be removed from a task.
+- uploads são validados quanto a MIME types permitidos e tamanho máximo;
+- os nomes de arquivo armazenados não podem depender de caminhos inseguros fornecidos pelo usuário;
+- usuários acessam apenas anexos pertencentes a tarefas que estão autorizados a acessar;
+- anexos podem ser removidos de uma tarefa.
 
-### FR-007 — List view
+### FR-007 — Visualização em lista
 
-The selected project's tasks shall be available in a clear list view.
+As tarefas do projeto selecionado devem estar disponíveis em uma visualização em lista clara.
 
-The list should expose enough task information to support quick scanning, including at minimum title and status, with deadline and tags when available.
+A lista deve expor informação suficiente para leitura rápida, incluindo no mínimo título e status, com prazo e tags quando disponíveis.
 
-### FR-008 — Kanban view
+### FR-008 — Visualização em Kanban
 
-The selected project's tasks shall be available in a Kanban view grouped by status.
+As tarefas do projeto selecionado devem estar disponíveis em uma visualização Kanban agrupada por status.
 
-Acceptance criteria:
+Critérios de aceite:
 
-- the four required status columns are represented;
-- moving a task between columns changes the persisted status;
-- the UI handles request failure without leaving the client in an incorrect state.
+- as quatro colunas de status obrigatórias estão representadas;
+- mover uma tarefa entre colunas altera o status persistido;
+- a interface lida com falha de requisição sem deixar o cliente em um estado incorreto.
 
-### FR-009 — View toggle
+### FR-009 — Alternância de visualização
 
-The user shall be able to switch between list and Kanban views without losing the selected project context.
+O usuário deve poder alternar entre lista e Kanban sem perder o contexto do projeto selecionado.
 
-## 7. Domain rules
+## 7. Regras de domínio
 
-- A `User` owns many `Projects`.
-- A `Project` belongs to exactly one `User`.
-- A `Project` owns many `Tasks`.
-- A `Task` belongs to exactly one `Project`.
-- A `Task` may have zero or many `Tags`.
-- A `Task` may have zero or many `Attachments`.
-- Authorization is based on ownership through the project/user relationship.
-- Task access must be scoped through its parent project or otherwise enforce equivalent ownership checks.
-- `completed_at` may be recorded when a task becomes completed and cleared when it leaves the completed state.
+- Um `User` é dono de muitos `Projects`.
+- Um `Project` pertence a exatamente um `User`.
+- Um `Project` é dono de muitas `Tasks`.
+- Uma `Task` pertence a exatamente um `Project`.
+- Uma `Task` pode ter zero ou muitas `Tags`.
+- Uma `Task` pode ter zero ou muitos `Attachments`.
+- A autorização é baseada em propriedade através da relação project/user.
+- O acesso à tarefa precisa ser delimitado pelo projeto pai ou, de outra forma, aplicar verificações de propriedade equivalentes.
+- `completed_at` pode ser registrado quando uma tarefa é concluída e limpo quando ela sai do estado concluído.
 
-## 8. Proposed data model
+## 8. Modelo de dados proposto
 
 ### users
 
-Laravel authentication user model.
+Model de usuário da autenticação do Laravel.
 
-Key fields:
+Campos principais:
 
 - id
 - name
@@ -229,7 +229,7 @@ Key fields:
 - position nullable
 - timestamps
 
-Indexes should support ownership-scoped project retrieval.
+Os índices devem suportar a recuperação de projetos delimitada por propriedade.
 
 ### tasks
 
@@ -244,7 +244,7 @@ Indexes should support ownership-scoped project retrieval.
 - completed_at nullable
 - timestamps
 
-Indexes should support project/status queries and deadline-oriented queries when useful.
+Os índices devem suportar queries por project/status e queries orientadas a prazo quando útil.
 
 ### tags
 
@@ -256,7 +256,7 @@ Indexes should support project/status queries and deadline-oriented queries when
 
 ### task_tag
 
-Pivot relation between tasks and tags.
+Relação pivô entre tasks e tags.
 
 ### attachments
 
@@ -270,7 +270,7 @@ Pivot relation between tasks and tags.
 
 ### activity_logs (stretch goal)
 
-If implemented after the required scope is stable:
+Se implementada depois que o escopo obrigatório estiver estável:
 
 - id
 - user_id
@@ -280,214 +280,214 @@ If implemented after the required scope is stable:
 - metadata JSON/JSONB nullable
 - created_at
 
-This table exists to support traceability of meaningful domain changes.
+Esta tabela existe para dar rastreabilidade a mudanças relevantes de domínio.
 
-## 9. API boundary
+## 9. Fronteira da API
 
-The Laravel application is the authoritative backend. The Next.js application consumes a REST/JSON API.
+A aplicação Laravel é o backend autoritativo. A aplicação Next.js consome uma API REST/JSON.
 
-Initial API surface is expected to include endpoints equivalent to:
+Espera-se que a superfície inicial da API inclua endpoints equivalentes a:
 
-- authentication/session endpoints;
-- current authenticated user;
-- project collection/resource endpoints;
-- tasks scoped by project;
-- task resource update/delete endpoints;
-- explicit task status and/or ordering updates where useful;
+- endpoints de autenticação/sessão;
+- usuário autenticado atual;
+- endpoints de coleção/resource de projetos;
+- tarefas delimitadas por projeto;
+- endpoints de atualização/exclusão de resource de tarefa;
+- atualizações explícitas de status e/ou ordenação de tarefa, onde úteis;
 - tags;
-- task attachments.
+- anexos de tarefa.
 
-Exact routes and payloads will be documented after Laravel bootstrapping and before frontend integration.
+As rotas e os payloads exatos serão documentados após o bootstrap do Laravel e antes da integração com o frontend.
 
-API responses should use stable resource shapes and appropriate HTTP status codes.
+As respostas da API devem usar formatos de resource estáveis e códigos de status HTTP apropriados.
 
-## 10. Authentication strategy
+## 10. Estratégia de autenticação
 
-Laravel Sanctum is the intended authentication mechanism for the first-party web client.
+O Laravel Sanctum é o mecanismo de autenticação pretendido para o cliente web first-party.
 
-Preferred approach:
+Abordagem preferencial:
 
-- secure HTTP-only cookie/session-based authentication;
-- CSRF protection;
-- no custom JWT implementation unless a concrete deployment constraint requires it.
+- autenticação baseada em sessão/cookie seguro HTTP-only;
+- proteção CSRF;
+- nenhuma implementação de JWT própria, a menos que uma restrição concreta de deploy exija.
 
-Authentication details will be finalized in an ADR before implementation.
+Os detalhes de autenticação serão finalizados em um ADR antes da implementação.
 
-## 11. Authorization rules
+## 11. Regras de autorização
 
-Authorization is mandatory on every private resource.
+A autorização é obrigatória em todo recurso privado.
 
-At minimum:
+No mínimo:
 
-- users can only list their own projects;
-- users can only view/update/delete their own projects;
-- users can only create tasks inside projects they own;
-- users can only view/update/delete tasks whose project they own;
-- nested resources must verify both parent ownership and child relationship;
-- users can only access task attachments for tasks they are authorized to access;
-- users cannot attach another user's tag to a task.
+- usuários só podem listar seus próprios projetos;
+- usuários só podem ver/atualizar/excluir seus próprios projetos;
+- usuários só podem criar tarefas dentro de projetos que possuem;
+- usuários só podem ver/atualizar/excluir tarefas cujo projeto lhes pertence;
+- recursos aninhados precisam verificar tanto a propriedade do pai quanto o relacionamento com o filho;
+- usuários só podem acessar anexos de tarefas que estão autorizados a acessar;
+- usuários não podem anexar a tag de outro usuário a uma tarefa.
 
-Potential IDOR/horizontal privilege escalation paths must be covered by automated tests.
+Possíveis caminhos de IDOR/escalonamento horizontal de privilégio precisam estar cobertos por testes automatizados.
 
-## 12. Validation rules
+## 12. Regras de validação
 
-Detailed limits may be tuned during implementation, but the baseline is:
+Os limites detalhados podem ser ajustados durante a implementação, mas a linha de base é:
 
-- project name: required, trimmed, bounded length;
-- task title: required, trimmed, bounded length;
-- short description: optional, bounded concise text;
-- description: optional text;
-- status: strict enum of the four supported values;
-- deadline: valid date/time when present;
-- tags: validated identifiers belonging to the authenticated user;
-- attachments: validated MIME type and maximum file size;
-- uploaded paths and filenames are generated/normalized server-side.
+- nome do projeto: obrigatório, com trim, comprimento limitado;
+- título da tarefa: obrigatório, com trim, comprimento limitado;
+- descrição curta: opcional, texto conciso limitado;
+- descrição: texto opcional;
+- status: enum estrito dos quatro valores suportados;
+- prazo: data/hora válida quando presente;
+- tags: identificadores validados, pertencentes ao usuário autenticado;
+- anexos: MIME type e tamanho máximo de arquivo validados;
+- caminhos e nomes de arquivo enviados são gerados/normalizados no servidor.
 
-Validation rules must be authoritative in Laravel. The frontend may duplicate safe validation for user experience but must not be the security boundary.
+As regras de validação precisam ser autoritativas no Laravel. O frontend pode duplicar validação segura por experiência do usuário, mas não pode ser a fronteira de segurança.
 
-## 13. UX requirements
+## 13. Requisitos de UX
 
-- Responsive layout for desktop and mobile widths.
-- Fast project switching.
-- Clear empty states for new accounts/projects.
-- Accessible labels and keyboard-friendly controls where practical.
-- Visible loading, success, and failure feedback.
-- Task creation should require minimal navigation.
-- Task details may use a side panel/drawer to keep project context visible.
-- Kanban interactions should feel immediate; optimistic updates are preferred when rollback behavior is implemented safely.
-- Overdue deadlines should be visually distinguishable without relying only on color.
+- Layout responsivo para larguras de desktop e mobile.
+- Troca rápida de projeto.
+- Estados vazios claros para contas/projetos novos.
+- Labels acessíveis e controles navegáveis por teclado onde for prático.
+- Feedback visível de carregamento, sucesso e falha.
+- A criação de tarefa deve exigir navegação mínima.
+- Os detalhes da tarefa podem usar um painel lateral/drawer para manter o contexto do projeto visível.
+- As interações de Kanban devem parecer imediatas; atualizações otimistas são preferidas quando o comportamento de rollback é implementado com segurança.
+- Prazos vencidos devem ser visualmente distinguíveis sem depender apenas de cor.
 
-## 14. Non-functional requirements
+## 14. Requisitos não funcionais
 
-### Security
+### Segurança
 
-- Password hashing uses Laravel defaults.
-- CSRF protection remains enabled for stateful authentication.
-- Authorization must be server-side.
-- No secrets are committed to Git.
-- File uploads are validated and safely stored.
-- Mass-assignment boundaries are explicit.
+- O hash de senha usa os padrões do Laravel.
+- A proteção CSRF permanece habilitada para autenticação stateful.
+- A autorização precisa ser feita no servidor.
+- Nenhum segredo é commitado no Git.
+- Uploads de arquivo são validados e armazenados com segurança.
+- As fronteiras de mass assignment são explícitas.
 
 ### Performance
 
-- Avoid obvious N+1 database queries.
-- Use eager loading where relationships are displayed in collections.
-- Avoid unnecessary client JavaScript and rerenders.
-- Paginate or otherwise limit large collections if the implementation evolves beyond a small demo dataset.
+- Evitar queries N+1 óbvias.
+- Usar eager loading onde relacionamentos são exibidos em coleções.
+- Evitar JavaScript e rerenders desnecessários no cliente.
+- Paginar ou limitar coleções grandes de outra forma, caso a implementação evolua além de um conjunto pequeno de dados de demonstração.
 
-### Maintainability
+### Manutenibilidade
 
-- Controllers/route handlers remain thin.
-- Business operations are organized into appropriately scoped actions/services when complexity warrants it.
-- Laravel validation uses Form Requests or equivalent focused validators.
-- Authorization uses Policies and/or explicit ownership-scoped queries.
-- React components separate UI primitives from feature-specific behavior.
-- TypeScript strictness should be preserved.
+- Controllers/route handlers permanecem enxutos.
+- Operações de negócio são organizadas em actions/services adequadamente delimitados quando a complexidade justificar.
+- A validação no Laravel usa Form Requests ou validadores focados equivalentes.
+- A autorização usa Policies e/ou queries explicitamente delimitadas por propriedade.
+- Componentes React separam primitivos de UI do comportamento específico de cada funcionalidade.
+- A rigidez do TypeScript deve ser preservada.
 
-### Observability
+### Observabilidade
 
-For the challenge scope, application logs must be sufficient to diagnose backend errors. Structured application events/activity history are optional enhancements, not prerequisites for MVP completion.
+Para o escopo do desafio, os logs da aplicação precisam ser suficientes para diagnosticar erros de backend. Eventos estruturados de aplicação/histórico de atividade são melhorias opcionais, não pré-requisitos para concluir o MVP.
 
-## 15. Testing strategy
+## 15. Estratégia de testes
 
-Testing will prioritize business risk rather than arbitrary coverage percentage.
+Os testes priorizarão risco de negócio, e não um percentual arbitrário de cobertura.
 
 ### Backend
 
-Automated tests should cover at minimum:
+Os testes automatizados devem cobrir no mínimo:
 
-- registration/login/logout behavior;
-- user A cannot access user B's projects;
-- user A cannot access user B's tasks;
-- nested task/project ownership enforcement;
-- project CRUD happy paths;
-- task CRUD happy paths;
-- allowed and invalid task status transitions/values;
-- tag ownership validation;
-- attachment validation and authorization.
+- comportamento de cadastro/login/logout;
+- usuário A não acessa os projetos do usuário B;
+- usuário A não acessa as tarefas do usuário B;
+- aplicação da propriedade em tarefas/projetos aninhados;
+- caminhos felizes do CRUD de projetos;
+- caminhos felizes do CRUD de tarefas;
+- transições/valores de status de tarefa permitidos e inválidos;
+- validação de propriedade de tag;
+- validação e autorização de anexos.
 
 ### Frontend
 
-Tests should focus on meaningful interaction and state behavior, including list/Kanban switching and relevant form behavior.
+Os testes devem focar em interação e comportamento de estado relevantes, incluindo a alternância entre lista/Kanban e o comportamento pertinente dos formulários.
 
 ### End-to-end
 
-A Playwright flow should cover the primary product journey when practical:
+Um fluxo em Playwright deve cobrir a jornada principal de produto quando for prático:
 
-1. register/login;
-2. create a project;
-3. create a task;
-4. edit the task;
-5. move/update task status;
-6. switch between list and Kanban;
-7. log out.
+1. cadastrar/entrar;
+2. criar um projeto;
+3. criar uma tarefa;
+4. editar a tarefa;
+5. mover/atualizar o status da tarefa;
+6. alternar entre lista e Kanban;
+7. sair.
 
-## 16. AI-assisted engineering requirements
+## 16. Requisitos de engenharia assistida por IA
 
-AI tools may be used for implementation, refactoring, test generation, architecture review, security review, and documentation.
+Ferramentas de IA podem ser usadas para implementação, refatoração, geração de testes, revisão de arquitetura, revisão de segurança e documentação.
 
-AI output is never considered authoritative by itself.
+O output da IA nunca é considerado autoritativo por si só.
 
-Relevant interactions must be logged in `docs/AI_USAGE.md` with:
+As interações relevantes precisam ser registradas em `docs/AI_USAGE.md` com:
 
-- tool/model when relevant;
-- task/goal;
-- prompt or summarized prompt;
-- useful output;
-- human review;
-- corrections/rejections;
-- final decision.
+- ferramenta/modelo quando relevante;
+- tarefa/objetivo;
+- prompt ou prompt resumido;
+- output útil;
+- revisão humana;
+- correções/rejeições;
+- decisão final.
 
-Special attention should be given to documenting cases where AI output was incomplete, unsafe, incorrect, or unnecessarily complex.
+Atenção especial deve ser dada a documentar os casos em que o output da IA foi incompleto, inseguro, incorreto ou desnecessariamente complexo.
 
-## 17. Definition of Done — required scope
+## 17. Definition of Done — escopo obrigatório
 
-The required scope is considered complete only when:
+O escopo obrigatório é considerado completo apenas quando:
 
-- registration works;
-- login works;
-- session persistence works;
-- logout works;
-- projects can be created, viewed, edited, organized, and deleted;
-- tasks can be created and fully edited;
-- task title, short description, full description, deadline, tags, attachments/photos, and status are supported;
-- all four required statuses are supported;
-- list view works;
-- Kanban view works;
-- view toggle works;
-- authorization prevents cross-user access;
-- required validation is enforced server-side;
-- no known critical bug blocks the core flow;
-- automated tests protect the most important domain/security behavior;
-- README documents how to run the project;
-- AI usage is documented;
-- architecture decisions are documented.
+- o cadastro funciona;
+- o login funciona;
+- a persistência de sessão funciona;
+- o logout funciona;
+- projetos podem ser criados, visualizados, editados, organizados e excluídos;
+- tarefas podem ser criadas e totalmente editadas;
+- título, descrição curta, descrição completa, prazo, tags, anexos/fotos e status da tarefa são suportados;
+- os quatro status obrigatórios são suportados;
+- a visualização em lista funciona;
+- a visualização em Kanban funciona;
+- a alternância de visualização funciona;
+- a autorização impede acesso entre usuários;
+- a validação obrigatória é aplicada no servidor;
+- nenhum bug crítico conhecido bloqueia o fluxo principal;
+- testes automatizados protegem o comportamento de domínio/segurança mais importante;
+- o README documenta como rodar o projeto;
+- o uso de IA está documentado;
+- as decisões de arquitetura estão documentadas.
 
 ## 18. Stretch goals
 
-Only after the required scope is stable:
+Somente depois que o escopo obrigatório estiver estável:
 
-- drag-and-drop persistence and optimistic rollback refinement;
-- task search and filters;
-- overdue indicators;
-- project progress summary;
-- activity history;
-- polished image previews;
-- seeded demo account/data;
-- OpenAPI documentation;
-- CI pipeline;
-- deployed environment.
+- persistência de drag-and-drop e refinamento do rollback otimista;
+- busca e filtros de tarefa;
+- indicadores de atraso;
+- resumo de progresso do projeto;
+- histórico de atividade;
+- pré-visualizações de imagem polidas;
+- conta/dados de demonstração via seed;
+- documentação OpenAPI;
+- pipeline de CI;
+- ambiente publicado.
 
-Stretch work must not reduce reliability of the required scope.
+O trabalho de stretch não pode reduzir a confiabilidade do escopo obrigatório.
 
-## 19. Open decisions
+## 19. Decisões em aberto
 
-The following decisions will be captured in ADRs before their implementation becomes difficult to reverse:
+As decisões a seguir serão registradas em ADRs antes que sua implementação se torne difícil de reverter:
 
-- monorepo organization;
-- Laravel/Next.js responsibility boundary;
-- Sanctum authentication topology and deployment-domain assumptions;
-- storage strategy for attachments;
-- Kanban drag-and-drop library;
-- exact REST resource contract;
-- CI/deployment strategy.
+- organização do monorepo;
+- fronteira de responsabilidade entre Laravel e Next.js;
+- topologia de autenticação com Sanctum e premissas de domínio no deploy;
+- estratégia de storage para anexos;
+- biblioteca de drag-and-drop do Kanban;
+- contrato REST exato dos resources;
+- estratégia de CI/deploy.
