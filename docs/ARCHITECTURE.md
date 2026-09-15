@@ -130,6 +130,14 @@ Motivos:
 
 A topologia final de deploy (mesmo domínio pai versus origens de desenvolvimento local) precisa estar refletida na configuração de stateful domains do Sanctum, cookies, CORS e CSRF.
 
+### Recuperação de senha
+
+A redefinição de senha usa o Password Broker nativo do Laravel: o backend é dono da geração, expiração e invalidação do token, sem esquema próprio.
+
+A consequência arquitetural é que o e-mail é enviado pelo Laravel, mas o formulário vive no Next.js. O link é montado por `ResetPassword::createUrlUsing` a partir de `FRONTEND_URL`, de modo que a fronteira entre as duas aplicações continue explícita e configurável por ambiente, sem URL fixa espalhada pelo código.
+
+A solicitação responde sempre a mesma mensagem, independentemente de o endereço estar cadastrado, e a resposta de erro do reset não distingue token inválido de usuário inexistente. Os dois casos existem para evitar enumeração de contas.
+
 ## 8. Modelo de autorização
 
 A propriedade flui pela relação com o projeto:
@@ -285,7 +293,10 @@ A topologia pretendida para local/desenvolvimento é Docker Compose com serviço
 - web;
 - api;
 - PostgreSQL;
+- Mailpit, para inspecionar e-mails em desenvolvimento;
 - Redis apenas se justificado por uso de sessão/cache/fila.
+
+O Mailpit é infraestrutura de desenvolvimento e não faz parte de um deploy de produção.
 
 Uma pessoa contribuindo deve, eventualmente, conseguir subir a aplicação completa a partir do README do repositório, sem depender de instalações de PHP/Node/PostgreSQL específicas do host.
 

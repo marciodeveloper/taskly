@@ -8,7 +8,7 @@ O projeto segue intencionalmente um **processo de engenharia spec-driven, assist
 
 **Fase:** aplicação implementada, em acabamento.
 
-As duas aplicações estão funcionais e orquestradas por Docker Compose: cadastro, login, projetos, tarefas, tags, anexos privados, visualizações em lista e Kanban com drag-and-drop, e a interface localizada em pt-BR.
+As duas aplicações estão funcionais e orquestradas por Docker Compose: cadastro, login, recuperação de senha, projetos, tarefas, tags, anexos privados, visualizações em lista e Kanban com drag-and-drop, e a interface localizada em pt-BR.
 
 ## Stack
 
@@ -33,6 +33,7 @@ As duas aplicações estão funcionais e orquestradas por Docker Compose: cadast
 
 - API REST/JSON
 - Docker Compose
+- Mailpit (captura de e-mail em desenvolvimento)
 - Desenvolvimento assistido por IA com rastreabilidade de revisão
 
 ## Arquitetura
@@ -54,37 +55,149 @@ O Next.js é dono da experiência interativa do produto, incluindo navegação e
 
 O frontend não acessa o PostgreSQL diretamente.
 
-## Como rodar localmente
+## Instalação com Docker — recomendada
 
 Pré-requisitos: Docker e Docker Compose.
+
+As portas `3000`, `18000`, `8025` e `1025` precisam estar livres no host.
 
 ```bash
 # 1. Configure o ambiente do backend
 cp apps/api/.env.example apps/api/.env
 
-# 2. Suba os serviços (postgres, api, web)
+# 2. Suba os serviços (postgres, api, web, mailpit)
 docker compose up -d --build
 
-# 3. Gere a chave da aplicação e rode as migrations
+# 3. Gere a chave da aplicação e crie o banco com dados de demonstração
 docker compose exec api php artisan key:generate
-docker compose exec api php artisan migrate
+docker compose exec api php artisan migrate --seed
 ```
 
 Com os serviços no ar:
 
-- frontend: <http://127.0.0.1:3000>
-- API: <http://127.0.0.1:18000>
+| Serviço | URL |
+| --- | --- |
+| Taskly | <http://127.0.0.1:3000> |
+| API | <http://127.0.0.1:18000> |
+| Mailpit | <http://127.0.0.1:8025> |
+
+### Conta de demonstração
+
+```text
+demo@taskly.test
+password
+```
+
+Criada pelo `DemoSeeder` com três projetos, cinco etiquetas e nove tarefas cobrindo os quatro status, incluindo uma tarefa atrasada.
+
+> **Somente para desenvolvimento local e demonstração.** A senha é pública e o seeder não é executado quando `APP_ENV=production`.
 
 ### Testes e verificações
 
 ```bash
 # Backend
 docker compose exec api php artisan test
+docker compose exec api ./vendor/bin/pint --test
 
 # Frontend
 docker compose exec web npm run lint
 docker compose exec web npm run build
 ```
+
+## Instalação sem Docker
+
+Caminho alternativo, para rodar as duas aplicações diretamente no host.
+
+### Pré-requisitos
+
+Backend:
+
+- PHP 8.3 ou superior (o `composer.json` exige `^8.3`);
+- extensão `pdo_pgsql` — obrigatória para conectar ao PostgreSQL;
+- Composer 2;
+- PostgreSQL 18 em execução, com banco e usuário criados.
+
+Frontend:
+
+- Node.js 24 LTS;
+- npm.
+
+As demais extensões exigidas (`mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`, `dom`, `filter`, `hash`, `iconv`, `libxml`, `pcre`, `phar`, `session`, `xmlwriter`) fazem parte de uma instalação padrão do PHP. Confira com:
+
+```bash
+cd apps/api && composer check-platform-reqs
+```
+
+### PostgreSQL
+
+Crie o banco e o usuário que o `.env.example` espera:
+
+```sql
+CREATE USER taskly WITH PASSWORD 'taskly';
+CREATE DATABASE taskly OWNER taskly;
+```
+
+### Backend
+
+```bash
+cd apps/api
+
+composer install
+cp .env.example .env
+php artisan key:generate
+
+# O .env.example já vem apontando para 127.0.0.1:5432
+php artisan migrate --seed
+php artisan serve --host=127.0.0.1 --port=18000
+```
+
+### Frontend
+
+Em outro terminal:
+
+```bash
+cd apps/web
+
+npm ci
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+`NEXT_PUBLIC_API_URL` tem `http://127.0.0.1:18000` como padrão embutido, então não é obrigatório configurá-lo. Para deixar explícito:
+
+```bash
+cp .env.example .env.local
+```
+
+### E-mail no modo nativo
+
+O `.env.example` usa `MAIL_MAILER=log`: a aplicação sobe sem nenhum servidor de e-mail e o link de redefinição de senha é gravado em `apps/api/storage/logs/laravel.log`.
+
+Para clicar no link em uma interface de verdade, aponte para um Mailpit local:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+```
+
+Isso funciona tanto com um Mailpit instalado no host quanto com o do `docker compose`, que publica a porta SMTP em `127.0.0.1:1025`.
+
+## Recuperação de senha
+
+O fluxo usa o Password Broker nativo do Laravel:
+
+1. na tela de login, clique em **Esqueci minha senha**;
+2. informe o e-mail (`demo@taskly.test` no ambiente de demonstração);
+3. abra o Mailpit em <http://127.0.0.1:8025>;
+4. abra a mensagem e clique em **Redefinir senha** — o link aponta para `/reset-password` no frontend;
+5. defina a nova senha e faça login com ela.
+
+Observações de segurança:
+
+- a solicitação responde sempre a mesma mensagem genérica, exista ou não uma conta com aquele e-mail;
+- os endpoints são limitados a 6 requisições por minuto;
+- o token expira em 60 minutos e só pode ser usado uma vez;
+- o token nunca é devolvido pela API.
 
 ## Escopo de produto exigido
 
@@ -160,7 +273,6 @@ As interações relevantes — especialmente sugestões rejeitadas ou corrigidas
 
 ## Melhorias futuras
 
-- Recuperação de senha ("Esqueci minha senha"): ainda não há backend de password reset, então o fluxo não é oferecido na interface.
 - Pipeline de CI (GitHub Actions).
 - Ambiente publicado.
 - Cobertura end-to-end com Playwright.
