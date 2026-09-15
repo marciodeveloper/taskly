@@ -1,0 +1,126 @@
+name: Taskly CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/visual-polish, main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the CI-passed SHA to production
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests and Pint
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, pdo_pgsql, mbstring, xml, dom, fileinfo
+          coverage: none
+          tools: composer:v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/api/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Create an isolated test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+      - name: Laravel tests (SQLite in memory; never production PostgreSQL)
+        run: php artisan test
+      - name: Pint
+        run: ./vendor/bin/pint --test
+
+  frontend:
+    name: Frontend lint and build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install Node dependencies
+        run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: Next.js build
+        run: npm run build
+
+  production-images:
+    name: Production Compose and image builds
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production Compose with configuration-only placeholders
+        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config --quiet
+      - name: Build production API and web images
+        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml build api web
+
+  deploy:
+    name: Deploy exact CI-passed SHA
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy)
+    needs: [backend, frontend, production-images]
+    runs-on: ubuntu-24.04
+    environment: production
+    concurrency:
+      group: taskly-production
+      cancel-in-progress: false
+    env:
+      DEPLOY_HOST: 72.62.111.217
+      DEPLOY_USER: dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load dedicated SSH identity and pinned host key
+        env:
+          TASKLY_DEPLOY_SSH_KEY: ${{ secrets.TASKLY_DEPLOY_SSH_KEY }}
+          TASKLY_DEPLOY_KNOWN_HOSTS: ${{ secrets.TASKLY_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$TASKLY_DEPLOY_SSH_KEY" || { echo 'Missing TASKLY_DEPLOY_SSH_KEY' >&2; exit 1; }
+          test -n "$TASKLY_DEPLOY_KNOWN_HOSTS" || { echo 'Missing TASKLY_DEPLOY_KNOWN_HOSTS' >&2; exit 1; }
+          umask 077
+          mkdir -p "$RUNNER_TEMP/taskly_ssh"
+          printf '%s\n' "$TASKLY_DEPLOY_SSH_KEY" > "$RUNNER_TEMP/taskly_ssh/id_ed25519"
+          printf '%s\n' "$TASKLY_DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/taskly_ssh/known_hosts"
+      - name: Deploy the workflow commit over SSH
+        run: |
+          ssh -i "$RUNNER_TEMP/taskly_ssh/id_ed25519" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/taskly_ssh/known_hosts" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash -s -- '$GITHUB_SHA'" < scripts/deploy-production.sh
+      - name: Public HTTPS smoke checks
+        run: |
+          for path in / /login /register /up; do
+            status=$(curl --silent --show-error --max-time 20 \
+              --output /dev/null --write-out '%{http_code}' \
+              "https://taskly.webarthem.com$path")
+            test "$status" = 200 || { echo "$path returned $status" >&2; exit 1; }
+          done
+          status=$(curl --silent --show-error --max-time 20 \
+            --output /dev/null --write-out '%{http_code}' \
+            https://taskly.webarthem.com/sanctum/csrf-cookie)
+          [[ "$status" =~ ^2[0-9][0-9]$ ]] || { echo "Sanctum returned $status" >&2; exit 1; }
