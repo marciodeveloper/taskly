@@ -159,15 +159,11 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
 const previewableImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function PendingImagePreview({ file }: { file: File }) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl] = useState(() => URL.createObjectURL(file));
 
   useEffect(() => {
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
-
-  if (!previewUrl) return <span className="ds-meta">Loading preview...</span>;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   // This local blob URL is temporary and cannot be processed by the Next image optimizer.
   // eslint-disable-next-line @next/next/no-img-element
