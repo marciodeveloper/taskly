@@ -11,7 +11,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-RUN test "$NEXT_PUBLIC_API_URL" = "https://taskly.webarthem.com" \
+RUN test "$NEXT_PUBLIC_API_URL" = "https://taskly.webarthem.com.br" \
     && npm run build
 
 FROM node:24-bookworm-slim AS runtime

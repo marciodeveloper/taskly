@@ -42,10 +42,10 @@ services:
       context: ./apps/web
       dockerfile: ../../docker/web/Dockerfile.prod
       args:
-        NEXT_PUBLIC_API_URL: https://taskly.webarthem.com
+        NEXT_PUBLIC_API_URL: https://taskly.webarthem.com.br
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: https://taskly.webarthem.com
+      NEXT_PUBLIC_API_URL: https://taskly.webarthem.com.br
     depends_on:
       api:
         condition: service_healthy

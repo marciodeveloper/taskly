@@ -30,8 +30,8 @@ fi
 
 if ! rg -q '^APP_ENV=production$' "$ENV_FILE" \
   || ! rg -q '^APP_DEBUG=false$' "$ENV_FILE" \
-  || ! rg -q '^APP_URL=https://taskly\.webarthem\.com$' "$ENV_FILE" \
-  || ! rg -q '^FRONTEND_URL=https://taskly\.webarthem\.com$' "$ENV_FILE" \
+  || ! rg -q '^APP_URL=https://taskly\.webarthem\.com\.br$' "$ENV_FILE" \
+  || ! rg -q '^FRONTEND_URL=https://taskly\.webarthem\.com\.br$' "$ENV_FILE" \
   || ! rg -q '^SESSION_SECURE_COOKIE=true$' "$ENV_FILE" \
   || ! rg -q '^APP_KEY=base64:[A-Za-z0-9+/=]{43,}$' "$ENV_FILE" \
   || ! rg -q '^DB_PASSWORD=[^[:space:]]{32,}$' "$ENV_FILE" \

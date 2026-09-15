@@ -117,10 +117,10 @@ jobs:
           for path in / /login /register /up; do
             status=$(curl --silent --show-error --max-time 20 \
               --output /dev/null --write-out '%{http_code}' \
-              "https://taskly.webarthem.com$path")
+              "https://taskly.webarthem.com.br$path")
             test "$status" = 200 || { echo "$path returned $status" >&2; exit 1; }
           done
           status=$(curl --silent --show-error --max-time 20 \
             --output /dev/null --write-out '%{http_code}' \
-            https://taskly.webarthem.com/sanctum/csrf-cookie)
+            https://taskly.webarthem.com.br/sanctum/csrf-cookie)
           [[ "$status" =~ ^2[0-9][0-9]$ ]] || { echo "Sanctum returned $status" >&2; exit 1; }
