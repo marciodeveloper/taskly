@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -237,7 +238,7 @@ export default function DashboardPage() {
               <div><div className="flex items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color ?? "#94A3B8" }} aria-hidden="true" /><h2 className="text-3xl font-bold text-slate-900">{selected.name}</h2></div><p className="mt-3 text-slate-600">{selected.description || "No description yet."}</p></div>
               <div className="flex gap-2"><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)}>Edit</button><button className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
             </div>
-            <div className="mt-16 rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Tasks will appear here later.</div>
+            <TaskWorkspace key={selected.id} projectId={selected.id} />
           </div>}
           {feedback && <p className="mt-5 text-sm font-medium text-emerald-700" role="status">{feedback}</p>}
         </section>
