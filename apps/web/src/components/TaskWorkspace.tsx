@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarClock,
@@ -225,6 +225,26 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
   const [creatingTag, setCreatingTag] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState<Attachment | null>(null);
   const [attachmentDeletePending, setAttachmentDeletePending] = useState(false);
+  const attachmentCancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!attachmentToDelete) return;
+
+    const focusFrame = window.requestAnimationFrame(() => attachmentCancelRef.current?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !attachmentDeletePending) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setAttachmentToDelete(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [attachmentDeletePending, attachmentToDelete]);
 
   function toggleTag(tagId: number) {
     setSelectedTagIds((current) => current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]);
@@ -401,7 +421,7 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
         </div>
       )}
       {message && <p className="ds-alert" role="alert">{message}</p>}
-      <div className="flex flex-wrap gap-2">
+      <div className="ds-task-form-actions flex flex-wrap gap-2">
         <button className="ds-button ds-button-primary" disabled={saving || creatingTag || attachmentDeletePending} type="submit">
           <Save className="ds-icon-sm" aria-hidden="true" />
           {saving ? (pendingFiles.length > 0 ? "Saving and uploading..." : "Saving...") : persistedTask ? "Save changes" : "Create task"}
@@ -410,12 +430,18 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
       </div>
 
       {attachmentToDelete && (
-        <div className="ds-modal-overlay fixed inset-0 z-30 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-attachment-title">
+        <div
+          className="ds-modal-overlay fixed inset-0 z-30 grid place-items-center p-4"
+          data-task-nested-dialog="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-attachment-title"
+        >
           <div className="ds-modal">
             <h2 className="ds-modal-title" id="delete-attachment-title">Delete &quot;{attachmentToDelete.original_name}&quot;?</h2>
             <p className="ds-copy mt-2">The private file will be permanently removed.</p>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
-              <button className="ds-button ds-button-secondary" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancel</button>
+              <button ref={attachmentCancelRef} className="ds-button ds-button-secondary" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancel</button>
               <button className="ds-button ds-button-danger-solid" disabled={attachmentDeletePending} onClick={() => void deleteAttachment()} type="button">
                 <Trash2 className="ds-icon-sm" aria-hidden="true" />
                 {attachmentDeletePending ? "Deleting..." : "Delete attachment"}
@@ -425,6 +451,81 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
         </div>
       )}
     </form>
+  );
+}
+
+type TaskDrawerProps = {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+  children: ReactNode;
+};
+
+function TaskDrawer({ title, subtitle, onClose, children }: TaskDrawerProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (document.querySelector('[data-task-nested-dialog="true"]')) return;
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => returnFocus?.focus());
+    };
+  }, [onClose]);
+
+  return (
+    <>
+      <button className="ds-task-drawer-backdrop" aria-label="Close task editor" onClick={onClose} type="button" />
+      <aside ref={panelRef} className="ds-task-drawer" role="dialog" aria-modal="true" aria-labelledby="task-drawer-title">
+        <header className="ds-task-drawer-header">
+          <div className="min-w-0">
+            <p className="ds-task-drawer-eyebrow">Task details</p>
+            <h3 className="ds-task-drawer-title" id="task-drawer-title">{title}</h3>
+            <p className="ds-task-drawer-subtitle">{subtitle}</p>
+          </div>
+          <button ref={closeButtonRef} className="ds-icon-button ds-task-drawer-close" aria-label="Close task editor" onClick={onClose} type="button">
+            <X className="ds-icon" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="ds-task-drawer-body">{children}</div>
+      </aside>
+    </>
   );
 }
 
@@ -456,6 +557,23 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); };
   }, []);
+
+  const closeTaskDrawer = useCallback(() => {
+    setCreating(false);
+    setEditingTask(null);
+  }, []);
+
+  function startCreatingTask() {
+    setCreating(true);
+    setEditingTask(null);
+    setFeedback("");
+  }
+
+  function startEditingTask(task: Task) {
+    setEditingTask(task);
+    setCreating(false);
+    setFeedback("");
+  }
 
   function updateTask(saved: Task) {
     setTasks((current) => current.some((item) => item.id === saved.id) ? current.map((item) => item.id === saved.id ? saved : item) : [...current, saved]);
@@ -513,6 +631,8 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     onTagCreated: (tag: Tag) => setTags((current) => [...current, tag].sort((a, b) => a.name.localeCompare(b.name))),
   };
 
+  const drawerOpen = creating || editingTask !== null;
+
   return (
     <div className="ds-task-workspace min-w-0">
       <div className="ds-task-toolbar mb-4 flex flex-wrap items-center justify-between gap-4">
@@ -531,8 +651,8 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
               Kanban
             </button>
           </div>
-          {!creating && !editingTask && (
-            <button className="ds-button ds-button-primary" onClick={() => { setCreating(true); setFeedback(""); }}>
+          {!drawerOpen && (
+            <button className="ds-button ds-button-primary" onClick={startCreatingTask}>
               <Plus className="ds-icon" aria-hidden="true" />
               New task
             </button>
@@ -540,15 +660,25 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
         </div>
       </div>
 
-      {creating && <TaskForm {...formProps} onCancel={() => setCreating(false)} />}
-      {editingTask && <TaskForm {...formProps} task={editingTask} onCancel={() => setEditingTask(null)} />}
+      {drawerOpen && (
+        <TaskDrawer
+          title={editingTask ? "Edit task" : "New task"}
+          subtitle={editingTask ? editingTask.title : "Add work without leaving the current project."}
+          onClose={closeTaskDrawer}
+        >
+          {editingTask
+            ? <TaskForm {...formProps} task={editingTask} onCancel={closeTaskDrawer} />
+            : <TaskForm {...formProps} onCancel={closeTaskDrawer} />}
+        </TaskDrawer>
+      )}
+
       {loading && <p className="ds-meta">Loading tasks...</p>}
       {loadError && <p className="ds-alert" role="alert">{loadError}</p>}
-      {!loading && !loadError && tasks.length === 0 && !creating && (
+      {!loading && !loadError && tasks.length === 0 && !drawerOpen && (
         <div className="ds-empty py-12">
           <h4 className="ds-empty-title">No tasks yet</h4>
           <p className="ds-copy mt-1">Create the first task and start moving work forward.</p>
-          <button className="ds-button ds-button-primary mt-4" onClick={() => { setCreating(true); setFeedback(""); }}>
+          <button className="ds-button ds-button-primary mt-4" onClick={startCreatingTask}>
             <Plus className="ds-icon" aria-hidden="true" />
             Create task
           </button>
@@ -562,7 +692,7 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
           pendingTaskIds={pendingTaskIds}
           editingTaskId={editingTask?.id ?? null}
           onMove={(task, status) => void changeStatus(task, status)}
-          onEdit={(task) => { setEditingTask(task); setCreating(false); setFeedback(""); }}
+          onEdit={startEditingTask}
           onDelete={(task) => { setTaskToDelete(task); setFeedback(""); }}
         />
       )}
@@ -614,7 +744,7 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
                 {task.attachments.length > 0 && <ul className="mt-3 grid gap-2">{task.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} />)}</ul>}
 
                 <div className="ds-task-actions mt-4">
-                  <button className="ds-action-button" disabled={pendingTaskIds.has(task.id)} onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>
+                  <button className="ds-action-button" disabled={pendingTaskIds.has(task.id)} onClick={() => startEditingTask(task)}>
                     <Pencil className="ds-icon-sm" aria-hidden="true" />
                     Edit
                   </button>
