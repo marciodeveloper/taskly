@@ -1,0 +1,5 @@
+# Local AI/design tooling
+/.agents/
+/.claude/
+/.codex/
+/tools/design-audit/
