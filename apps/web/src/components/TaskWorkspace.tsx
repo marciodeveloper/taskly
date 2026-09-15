@@ -159,15 +159,41 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
 const previewableImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function PendingImagePreview({ file }: { file: File }) {
-  const [previewUrl] = useState(() => URL.createObjectURL(file));
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+    let cancelled = false;
+    const reader = new FileReader();
 
-  // This local blob URL is temporary and cannot be processed by the Next image optimizer.
+    reader.onload = () => {
+      if (!cancelled && typeof reader.result === "string") {
+        setPreviewUrl(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+
+    return () => {
+      cancelled = true;
+
+      if (reader.readyState === FileReader.LOADING) {
+        reader.abort();
+      }
+    };
+  }, [file]);
+
+  if (!previewUrl) {
+    return <span className="ds-meta">Loading preview...</span>;
+  }
+
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={previewUrl} alt={`Preview of ${file.name}`} className="ds-thumbnail" />;
+  return (
+    <img
+      src={previewUrl}
+      alt={`Preview of ${file.name}`}
+      className="ds-thumbnail"
+    />
+  );
 }
 
 type TaskFormProps = {
