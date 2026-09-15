@@ -6,9 +6,15 @@ O projeto segue intencionalmente um **processo de engenharia spec-driven, assist
 
 ## Status atual
 
-**Fase:** aplicação implementada, em acabamento.
+**Fase:** aplicação implementada e publicada em ambiente público de demonstração.
 
 As duas aplicações estão funcionais e orquestradas por Docker Compose: cadastro, login, recuperação de senha, projetos, tarefas, tags, anexos privados, visualizações em lista e Kanban com drag-and-drop, e a interface localizada em pt-BR.
+
+## Demo online
+
+**https://taskly.webarthem.com.br**
+
+O ambiente público usa HTTPS, Nginx como reverse proxy e containers de produção separados para Next.js, Laravel e PostgreSQL. O cadastro é aberto, então a avaliação pode ser feita diretamente pela rota `/register` sem uma credencial pública fixa.
 
 ## Stack
 
@@ -33,6 +39,8 @@ As duas aplicações estão funcionais e orquestradas por Docker Compose: cadast
 
 - API REST/JSON
 - Docker Compose
+- GitHub Actions para CI/CD
+- Nginx + HTTPS em produção
 - Mailpit (captura de e-mail em desenvolvimento)
 - Desenvolvimento assistido por IA com rastreabilidade de revisão
 
@@ -199,6 +207,34 @@ Observações de segurança:
 - o token expira em 60 minutos e só pode ser usado uma vez;
 - o token nunca é devolvido pela API.
 
+No ambiente público atual, `MAIL_MAILER=log`; portanto, o fluxo externo de recuperação por e-mail depende da configuração futura de um SMTP real. O restante da aplicação funciona normalmente.
+
+## CI/CD e publicação
+
+O workflow em `.github/workflows/ci-cd.yml` está preparado para validar backend, frontend e imagens de produção antes do deploy e para publicar um SHA exato na VPS.
+
+A primeira publicação foi inicializada manualmente por SHA exato após a mesma bateria de validações locais, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Isso não é apresentado como CI remoto aprovado: o workflow permanece versionado e será a via normal de deploy da `main` quando os runners estiverem disponíveis.
+
+A produção atualmente publicada usa:
+
+```text
+Internet
+   |
+ HTTPS
+   |
+ Nginx
+   |
+   +--> Next.js  127.0.0.1:13080
+   |
+   +--> Laravel  127.0.0.1:18081
+            |
+            v
+        PostgreSQL
+        rede Docker interna
+```
+
+O PostgreSQL não publica porta no host e os anexos privados usam volume persistente dedicado.
+
 ## Escopo de produto exigido
 
 O Taskly oferece:
@@ -273,6 +309,5 @@ As interações relevantes — especialmente sugestões rejeitadas ou corrigidas
 
 ## Melhorias futuras
 
-- Pipeline de CI (GitHub Actions).
-- Ambiente publicado.
-- Cobertura end-to-end com Playwright.
+- Configuração de SMTP transacional para recuperação de senha no ambiente público.
+- Cobertura end-to-end versionada com Playwright.
