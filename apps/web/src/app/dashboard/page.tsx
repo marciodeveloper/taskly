@@ -1,15 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
   FolderPlus,
   LogOut,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
@@ -103,6 +107,9 @@ export default function DashboardPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const mobileSidebarCloseRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -129,8 +136,46 @@ export default function DashboardPage() {
     window.history.replaceState(null, "", `/dashboard?project=${selectedId}`);
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => mobileSidebarCloseRef.current?.focus());
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileSidebarOpen(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setMobileSidebarOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [mobileSidebarOpen]);
+
   const selected = useMemo(() => projects.find((project) => project.id === selectedId), [projects, selectedId]);
   const initials = useMemo(() => user?.name?.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U", [user?.name]);
+
+  function startCreatingProject() {
+    setCreating(true);
+    setEditing(false);
+    setMobileSidebarOpen(false);
+  }
+
+  function selectProject(projectId: number) {
+    setSelectedId(projectId);
+    setCreating(false);
+    setEditing(false);
+    setMobileSidebarOpen(false);
+  }
 
   async function saveProject(project: Project) {
     setProjects((current) => {
@@ -183,7 +228,20 @@ export default function DashboardPage() {
     <main className="ds-shell">
       <header className="ds-topbar">
         <div className="ds-topbar-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <p className="ds-brand">Taskly<span className="ds-brand-dot">.</span></p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              className="ds-icon-button ds-mobile-sidebar-trigger lg:hidden"
+              aria-controls="project-navigation"
+              aria-expanded={mobileSidebarOpen}
+              aria-label="Open project navigation"
+              onClick={() => setMobileSidebarOpen(true)}
+              type="button"
+            >
+              <Menu className="ds-icon" aria-hidden="true" />
+            </button>
+            <p className="ds-brand">Taskly<span className="ds-brand-dot">.</span></p>
+            {selected && <span className="ds-topbar-context hidden md:inline" aria-hidden="true">/ {selected.name}</span>}
+          </div>
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="ds-user-chip">
               <span className="ds-avatar" aria-hidden="true">{initials}</span>
@@ -197,28 +255,69 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
-        <aside className="ds-sidebar">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <h1 className="ds-sidebar-title">Projects</h1>
-            <button className="ds-button ds-button-ghost ds-button-compact" onClick={() => { setCreating(true); setEditing(false); }}>
-              <Plus className="ds-icon-sm" aria-hidden="true" />
-              New
-            </button>
-          </div>
-          {loading && <p className="ds-meta">Loading projects...</p>}
-          {error && <p className="ds-alert" role="alert">{error}</p>}
-          {!loading && !error && projects.length === 0 && (
-            <div className="ds-empty px-2 py-5">
-              <FolderPlus className="mx-auto mb-2 h-5 w-5 ds-accent-text" aria-hidden="true" />
-              <p className="ds-copy">No projects yet.</p>
-              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={() => setCreating(true)}>
+      {mobileSidebarOpen && (
+        <button
+          className="ds-mobile-sidebar-backdrop lg:hidden"
+          aria-label="Close project navigation"
+          onClick={() => setMobileSidebarOpen(false)}
+          type="button"
+        />
+      )}
+
+      <div className={`ds-dashboard-grid mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8 ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`}>
+        <aside
+          id="project-navigation"
+          className={`ds-sidebar ${sidebarCollapsed ? "is-collapsed" : ""} ${mobileSidebarOpen ? "is-mobile-open" : ""}`}
+          aria-label="Project navigation"
+        >
+          <div className="ds-sidebar-header mb-4 flex items-center justify-between gap-2">
+            <h1 className="ds-sidebar-title ds-sidebar-label">Projects</h1>
+            <div className="flex items-center gap-1">
+              <button
+                className="ds-button ds-button-ghost ds-button-compact ds-sidebar-new"
+                onClick={startCreatingProject}
+                title="New project"
+                type="button"
+              >
                 <Plus className="ds-icon-sm" aria-hidden="true" />
-                Create project
+                <span className="ds-sidebar-label">New</span>
+              </button>
+              <button
+                className="ds-icon-button ds-sidebar-collapse hidden lg:inline-grid"
+                aria-label={sidebarCollapsed ? "Expand project navigation" : "Collapse project navigation"}
+                aria-expanded={!sidebarCollapsed}
+                onClick={() => setSidebarCollapsed((current) => !current)}
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                type="button"
+              >
+                {sidebarCollapsed
+                  ? <PanelLeftOpen className="ds-icon-sm" aria-hidden="true" />
+                  : <PanelLeftClose className="ds-icon-sm" aria-hidden="true" />}
+              </button>
+              <button
+                ref={mobileSidebarCloseRef}
+                className="ds-icon-button ds-sidebar-mobile-close lg:hidden"
+                aria-label="Close project navigation"
+                onClick={() => setMobileSidebarOpen(false)}
+                type="button"
+              >
+                <X className="ds-icon" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          {loading && <p className="ds-meta ds-sidebar-label">Loading projects...</p>}
+          {error && <p className="ds-alert ds-sidebar-label" role="alert">{error}</p>}
+          {!loading && !error && projects.length === 0 && (
+            <div className="ds-empty ds-sidebar-empty px-2 py-5">
+              <FolderPlus className="mx-auto mb-2 h-5 w-5 ds-accent-text" aria-hidden="true" />
+              <p className="ds-copy ds-sidebar-label">No projects yet.</p>
+              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={startCreatingProject} title="Create project">
+                <Plus className="ds-icon-sm" aria-hidden="true" />
+                <span className="ds-sidebar-label">Create project</span>
               </button>
             </div>
           )}
-          <div className="grid gap-1.5">
+          <div className="ds-sidebar-project-list grid gap-1.5">
             {projects.map((project, index) => {
               const isSelected = project.id === selectedId;
               return (
@@ -226,16 +325,20 @@ export default function DashboardPage() {
                   <button
                     className="ds-project-select flex items-center gap-2.5 p-3"
                     aria-current={isSelected ? "page" : undefined}
-                    onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}
+                    aria-label={sidebarCollapsed ? project.name : undefined}
+                    data-tooltip={sidebarCollapsed ? project.name : undefined}
+                    onClick={() => selectProject(project.id)}
+                    title={sidebarCollapsed ? project.name : undefined}
+                    type="button"
                   >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
-                    <span className="truncate">{project.name}</span>
+                    <span className="ds-project-dot h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
+                    <span className="ds-project-label truncate">{project.name}</span>
                   </button>
                   <div className="ds-project-actions flex pr-1">
-                    <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)}>
+                    <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)} type="button">
                       <ChevronUp className="ds-icon-sm" aria-hidden="true" />
                     </button>
-                    <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)}>
+                    <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)} type="button">
                       <ChevronDown className="ds-icon-sm" aria-hidden="true" />
                     </button>
                   </div>
@@ -253,7 +356,7 @@ export default function DashboardPage() {
               <FolderPlus className="mx-auto mb-3 h-6 w-6 ds-accent-text" aria-hidden="true" />
               <h2 className="ds-empty-title">Choose a project</h2>
               <p className="ds-copy mt-2">Create your first project to start organizing work.</p>
-              <button className="ds-button ds-button-primary mt-5" onClick={() => setCreating(true)}>
+              <button className="ds-button ds-button-primary mt-5" onClick={startCreatingProject}>
                 <Plus className="ds-icon" aria-hidden="true" />
                 New project
               </button>
