@@ -508,7 +508,13 @@ function TaskDrawer({ title, subtitle, onClose, children }: TaskDrawerProps) {
   );
 }
 
-export default function TaskWorkspace({ projectId }: { projectId: number }) {
+type TaskWorkspaceProps = {
+  projectId: number;
+  /** Keeps the project list's task count in sync as tasks are added or removed. */
+  onTasksCountChange?: (count: number) => void;
+};
+
+export default function TaskWorkspace({ projectId, onTasksCountChange }: TaskWorkspaceProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -530,6 +536,11 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     }).catch(() => { if (active) setLoadError("Não foi possível carregar as tarefas e etiquetas deste projeto."); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [projectId]);
+
+  useEffect(() => {
+    if (loading || loadError) return;
+    onTasksCountChange?.(tasks.length);
+  }, [loading, loadError, onTasksCountChange, tasks.length]);
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);

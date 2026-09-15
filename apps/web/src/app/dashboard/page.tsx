@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -19,6 +19,20 @@ import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
 import type { Feedback } from "@/lib/feedback";
 import { useAuth } from "@/lib/auth/AuthContext";
+
+/**
+ * Deleting a project takes its tasks and attachments with it, so the
+ * confirmation has to say so whenever there is anything to lose.
+ */
+function deleteProjectWarning(tasksCount: number): string {
+  if (tasksCount < 1) return "Esta ação não pode ser desfeita.";
+
+  const tarefas = tasksCount === 1 ? "1 tarefa" : `${tasksCount} tarefas`;
+
+  return `Este projeto possui ${tarefas}. Ao excluí-lo, ${
+    tasksCount === 1 ? "ela e seus anexos também serão removidos" : "todas as tarefas e seus anexos também serão removidos"
+  } permanentemente. Esta ação não pode ser desfeita.`;
+}
 
 type ProjectFormProps = {
   project?: Project;
@@ -163,6 +177,14 @@ export default function DashboardPage() {
   }, [mobileSidebarOpen]);
 
   const selected = useMemo(() => projects.find((project) => project.id === selectedId), [projects, selectedId]);
+
+  const syncTasksCount = useCallback((tasksCount: number) => {
+    setProjects((current) => current.map((project) => (
+      project.id === selectedId && project.tasks_count !== tasksCount
+        ? { ...project, tasks_count: tasksCount }
+        : project
+    )));
+  }, [selectedId]);
   const initials = useMemo(() => user?.name?.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U", [user?.name]);
 
   function startCreatingProject() {
@@ -384,7 +406,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </div>
-              <TaskWorkspace key={selected.id} projectId={selected.id} />
+              <TaskWorkspace key={selected.id} projectId={selected.id} onTasksCountChange={syncTasksCount} />
             </div>
           )}
           {feedback && <p className={`ds-feedback mt-5 ${feedback.tone === "error" ? "ds-feedback-error" : ""}`} role="status">{feedback.text}</p>}
@@ -392,10 +414,10 @@ export default function DashboardPage() {
       </div>
 
       {deleteDialogOpen && selected && (
-        <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+        <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-description">
           <div className="ds-modal">
             <h2 className="ds-modal-title" id="delete-title">Excluir &quot;{selected.name}&quot;?</h2>
-            <p className="ds-copy mt-2">Esta ação não pode ser desfeita.</p>
+            <p className="ds-copy mt-2" id="delete-description">{deleteProjectWarning(selected.tasks_count)}</p>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
               <button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancelar</button>
               <button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>

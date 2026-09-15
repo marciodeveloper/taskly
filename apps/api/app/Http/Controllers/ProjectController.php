@@ -18,7 +18,11 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         return ProjectResource::collection(
-            $request->user()->projects()->orderBy('position')->orderBy('id')->get(),
+            $request->user()->projects()
+                ->withCount('tasks')
+                ->orderBy('position')
+                ->orderBy('id')
+                ->get(),
         );
     }
 
@@ -31,12 +35,12 @@ class ProjectController extends Controller
             'position' => $position,
         ]);
 
-        return new ProjectResource($project);
+        return new ProjectResource($project->loadCount('tasks'));
     }
 
     public function show(Request $request, int $project): ProjectResource
     {
-        return new ProjectResource($this->ownedProject($request, $project, 'view'));
+        return new ProjectResource($this->ownedProject($request, $project, 'view')->loadCount('tasks'));
     }
 
     public function update(UpdateProjectRequest $request, int $project): ProjectResource
@@ -44,7 +48,7 @@ class ProjectController extends Controller
         $ownedProject = $this->ownedProject($request, $project, 'update');
         $ownedProject->update($request->validated());
 
-        return new ProjectResource($ownedProject->refresh());
+        return new ProjectResource($ownedProject->refresh()->loadCount('tasks'));
     }
 
     public function destroy(
