@@ -8,6 +8,16 @@ export type User = {
   email: string;
 };
 
+export type Project = {
+  id: number;
+  name: string;
+  description: string | null;
+  color: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ValidationErrors = Record<string, string[]>;
 
 export class ApiError extends Error {
@@ -24,6 +34,16 @@ export class ApiError extends Error {
     this.status = status;
     this.validationErrors = validationErrors;
   }
+}
+
+let unauthorizedHandler: (() => void) | undefined;
+
+export function setUnauthorizedHandler(handler: () => void): () => void {
+  unauthorizedHandler = handler;
+
+  return () => {
+    if (unauthorizedHandler === handler) unauthorizedHandler = undefined;
+  };
 }
 
 function xsrfToken(): string | undefined {
@@ -48,40 +68,51 @@ async function initializeCsrf(): Promise<void> {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  requiresCsrf = false,
+  initializeCsrfBeforeRequest = false,
 ): Promise<T> {
-  if (requiresCsrf) {
+  if (initializeCsrfBeforeRequest) {
     await initializeCsrf();
   }
 
-  const headers = new Headers(options.headers);
-  headers.set("Accept", "application/json");
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const headers = new Headers(options.headers);
+    headers.set("Accept", "application/json");
 
-  if (options.body) {
-    headers.set("Content-Type", "application/json");
+    if (options.body) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const token = xsrfToken();
+    if (token) {
+      headers.set("X-XSRF-TOKEN", token);
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: "include",
+      headers,
+    });
+    const body = response.status === 204 ? undefined : await response.json();
+
+    if (response.status === 419 && attempt === 0) {
+      await initializeCsrf();
+      continue;
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) unauthorizedHandler?.();
+
+      throw new ApiError(
+        body?.message ?? "The request could not be completed.",
+        response.status,
+        body?.errors ?? {},
+      );
+    }
+
+    return (body?.data ?? body) as T;
   }
 
-  const token = xsrfToken();
-  if (token) {
-    headers.set("X-XSRF-TOKEN", token);
-  }
-
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-  const body = response.status === 204 ? undefined : await response.json();
-
-  if (!response.ok) {
-    throw new ApiError(
-      body?.message ?? "The request could not be completed.",
-      response.status,
-      body?.errors ?? {},
-    );
-  }
-
-  return (body?.data ?? body) as T;
+  throw new ApiError("The request could not be completed.", 419);
 }
 
 export const api = {
@@ -102,6 +133,32 @@ export const api = {
       { method: "POST", body: JSON.stringify(payload) },
       true,
     ),
-  logout: () => request<void>("/api/auth/logout", { method: "POST" }, true),
+  logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   me: () => request<User>("/api/me"),
+  getProjects: () => request<Project[]>("/api/projects"),
+  getProject: (id: number) => request<Project>(`/api/projects/${id}`),
+  createProject: (payload: {
+    name: string;
+    description?: string;
+    color?: string;
+  }) =>
+    request<Project>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateProject: (
+    id: number,
+    payload: { name?: string; description?: string | null; color?: string | null },
+  ) =>
+    request<Project>(`/api/projects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteProject: (id: number) =>
+    request<void>(`/api/projects/${id}`, { method: "DELETE" }),
+  reorderProjects: (project_ids: number[]) =>
+    request<void>("/api/projects/reorder", {
+      method: "PATCH",
+      body: JSON.stringify({ project_ids }),
+    }),
 };
