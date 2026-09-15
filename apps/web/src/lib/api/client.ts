@@ -24,6 +24,24 @@ export type TaskStatus =
   | "completed"
   | "cancelled";
 
+export type Tag = {
+  id: number;
+  name: string;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Attachment = {
+  id: number;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  is_image: boolean;
+  content_url: string;
+  created_at: string;
+};
+
 export type Task = {
   id: number;
   project_id: number;
@@ -34,6 +52,8 @@ export type Task = {
   due_at: string | null;
   position: number | null;
   completed_at: string | null;
+  tags: Tag[];
+  attachments: Attachment[];
   created_at: string;
   updated_at: string;
 };
@@ -44,6 +64,7 @@ export type TaskPayload = {
   description?: string | null;
   status: TaskStatus;
   due_at?: string | null;
+  tag_ids?: number[];
 };
 
 export type ValidationErrors = Record<string, string[]>;
@@ -106,7 +127,7 @@ async function request<T>(
     const headers = new Headers(options.headers);
     headers.set("Accept", "application/json");
 
-    if (options.body) {
+    if (options.body && !(options.body instanceof FormData)) {
       headers.set("Content-Type", "application/json");
     }
 
@@ -141,6 +162,37 @@ async function request<T>(
   }
 
   throw new ApiError("The request could not be completed.", 419);
+}
+
+async function requestBlob(path: string): Promise<Blob> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const headers = new Headers({ Accept: "application/json" });
+    const token = xsrfToken();
+    if (token) headers.set("X-XSRF-TOKEN", token);
+
+    const response = await fetch(`${API_URL}${path}`, {
+      credentials: "include",
+      headers,
+    });
+
+    if (response.status === 419 && attempt === 0) {
+      await initializeCsrf();
+      continue;
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) unauthorizedHandler?.();
+      const body = await response.json().catch(() => undefined);
+      throw new ApiError(
+        body?.message ?? "Unable to retrieve this attachment.",
+        response.status,
+      );
+    }
+
+    return response.blob();
+  }
+
+  throw new ApiError("Unable to retrieve this attachment.", 419);
 }
 
 export const api = {
@@ -204,4 +256,30 @@ export const api = {
     }),
   deleteTask: (taskId: number) =>
     request<void>(`/api/tasks/${taskId}`, { method: "DELETE" }),
+  getTags: () => request<Tag[]>("/api/tags"),
+  createTag: (payload: { name: string; color?: string | null }) =>
+    request<Tag>("/api/tags", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateTag: (tagId: number, payload: { name?: string; color?: string | null }) =>
+    request<Tag>(`/api/tags/${tagId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteTag: (tagId: number) =>
+    request<void>(`/api/tags/${tagId}`, { method: "DELETE" }),
+  uploadAttachment: (taskId: number, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+
+    return request<Attachment>(`/api/tasks/${taskId}/attachments`, {
+      method: "POST",
+      body,
+    });
+  },
+  deleteAttachment: (attachmentId: number) =>
+    request<void>(`/api/attachments/${attachmentId}`, { method: "DELETE" }),
+  getAttachmentContent: (attachmentId: number) =>
+    requestBlob(`/api/attachments/${attachmentId}/content`),
 };
