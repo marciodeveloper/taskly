@@ -30,6 +30,11 @@ export default function LoginPage() {
         }}
       />
       <p className="ds-copy">
+        <Link className="ds-accent-text font-semibold hover:underline" href="/forgot-password">
+          Esqueci minha senha
+        </Link>
+      </p>
+      <p className="ds-copy">
         Ainda não tem conta?{" "}
         <Link className="ds-accent-text font-semibold hover:underline" href="/register">
           Criar conta

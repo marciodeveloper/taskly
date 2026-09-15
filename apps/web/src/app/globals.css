@@ -280,6 +280,8 @@ textarea.ds-input { min-height: 96px; resize: vertical; }
 .ds-auth-page { background: radial-gradient(circle at 50% -10%, rgba(41,198,211,0.07), transparent 30rem), var(--bg); }
 .ds-auth-header { padding-bottom: 2px; }
 .ds-auth-submit { min-height: 44px; margin-top: 3px; }
+.ds-auth-sent { display: flex; align-items: flex-start; gap: 9px; padding: 12px 14px; background: rgba(72, 202, 141, 0.09); border: 1px solid rgba(72, 202, 141, 0.22); border-radius: var(--radius-input); font-weight: 600; }
+.ds-auth-sent .ds-icon { margin-top: 1px; }
 .ds-auth-card { padding: 32px; background: rgba(29, 34, 40, 0.92); border: 1px solid rgba(57,69,83,0.7); border-radius: var(--radius-panel); box-shadow: 0 26px 70px rgba(0,0,0,0.22); }
 
 @media (hover: none) { .ds-project-actions { opacity: 1; } }

@@ -14,6 +14,7 @@ export type Project = {
   description: string | null;
   color: string | null;
   position: number;
+  tasks_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -214,6 +215,23 @@ export const api = {
       true,
     ),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+  forgotPassword: (payload: { email: string }) =>
+    request<{ message: string }>(
+      "/api/auth/forgot-password",
+      { method: "POST", body: JSON.stringify(payload) },
+      true,
+    ),
+  resetPassword: (payload: {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+  }) =>
+    request<{ message: string }>(
+      "/api/auth/reset-password",
+      { method: "POST", body: JSON.stringify(payload) },
+      true,
+    ),
   me: () => request<User>("/api/me"),
   getProjects: () => request<Project[]>("/api/projects"),
   getProject: (id: number) => request<Project>(`/api/projects/${id}`),
