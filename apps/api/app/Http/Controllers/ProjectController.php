@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DeleteAttachmentFiles;
 use App\Http\Requests\ReorderProjectsRequest;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
+use App\Models\Attachment;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -45,9 +47,16 @@ class ProjectController extends Controller
         return new ProjectResource($ownedProject->refresh());
     }
 
-    public function destroy(Request $request, int $project): Response
-    {
+    public function destroy(
+        Request $request,
+        int $project,
+        DeleteAttachmentFiles $deleteAttachmentFiles,
+    ): Response {
         $ownedProject = $this->ownedProject($request, $project, 'delete');
+        $attachments = Attachment::query()
+            ->whereHas('task', fn ($query) => $query->where('project_id', $ownedProject->id))
+            ->get();
+        $deleteAttachmentFiles->handle($attachments);
         $ownedProject->delete();
 
         return response()->noContent();

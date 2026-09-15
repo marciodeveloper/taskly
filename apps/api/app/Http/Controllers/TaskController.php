@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DeleteAttachmentFiles;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -19,7 +20,11 @@ class TaskController extends Controller
         $ownedProject = $this->ownedProject($request, $project);
 
         return TaskResource::collection(
-            $ownedProject->tasks()->orderBy('position')->orderBy('id')->get(),
+            $ownedProject->tasks()
+                ->with(['tags', 'attachments'])
+                ->orderBy('position')
+                ->orderBy('id')
+                ->get(),
         );
     }
 
@@ -27,31 +32,49 @@ class TaskController extends Controller
     {
         $ownedProject = $this->ownedProject($request, $project);
         $maxPosition = $ownedProject->tasks()->max('position');
-        $attributes = $this->withCompletedAt($request->validated());
+        $attributes = $request->validated();
+        $tagIds = $attributes['tag_ids'] ?? [];
+        unset($attributes['tag_ids']);
+        $attributes = $this->withCompletedAt($attributes);
         $task = $ownedProject->tasks()->create([
             ...$attributes,
             'position' => $maxPosition === null ? 0 : $maxPosition + 1,
         ]);
+        $task->tags()->sync($tagIds);
 
-        return new TaskResource($task);
+        return new TaskResource($task->load(['tags', 'attachments']));
     }
 
     public function show(Request $request, int $task): TaskResource
     {
-        return new TaskResource($this->ownedTask($request, $task, 'view'));
+        return new TaskResource(
+            $this->ownedTask($request, $task, 'view')->load(['tags', 'attachments']),
+        );
     }
 
     public function update(UpdateTaskRequest $request, int $task): TaskResource
     {
         $ownedTask = $this->ownedTask($request, $task, 'update');
-        $ownedTask->update($this->withCompletedAt($request->validated(), $ownedTask));
+        $attributes = $request->validated();
+        $shouldSyncTags = array_key_exists('tag_ids', $attributes);
+        $tagIds = $attributes['tag_ids'] ?? [];
+        unset($attributes['tag_ids']);
+        $ownedTask->update($this->withCompletedAt($attributes, $ownedTask));
 
-        return new TaskResource($ownedTask->refresh());
+        if ($shouldSyncTags) {
+            $ownedTask->tags()->sync($tagIds);
+        }
+
+        return new TaskResource($ownedTask->refresh()->load(['tags', 'attachments']));
     }
 
-    public function destroy(Request $request, int $task): Response
-    {
+    public function destroy(
+        Request $request,
+        int $task,
+        DeleteAttachmentFiles $deleteAttachmentFiles,
+    ): Response {
         $ownedTask = $this->ownedTask($request, $task, 'delete');
+        $deleteAttachmentFiles->handle($ownedTask->attachments()->get());
         $ownedTask->delete();
 
         return response()->noContent();

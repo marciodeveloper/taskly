@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,7 +15,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/projects/{project}/tasks', [TaskController::class, 'index']);
     Route::post('/projects/{project}/tasks', [TaskController::class, 'store']);
+    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'store']);
+    Route::get('/attachments/{attachment}/content', [AttachmentController::class, 'content'])
+        ->name('attachments.content');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
     Route::patch('/projects/reorder', [ProjectController::class, 'reorder']);
     Route::apiResource('projects', ProjectController::class)->except(['create', 'edit']);
     Route::apiResource('tasks', TaskController::class)->only(['show', 'update', 'destroy']);
+    Route::apiResource('tags', TagController::class)->only(['index', 'store', 'update', 'destroy']);
 });
