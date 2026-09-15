@@ -29,7 +29,7 @@ class AuthController extends Controller
     {
         if (! Auth::attempt($request->validated())) {
             return response()->json([
-                'message' => 'The provided credentials are incorrect.',
+                'message' => __('auth.failed'),
             ], 422);
         }
 
