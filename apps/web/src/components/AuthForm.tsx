@@ -86,9 +86,11 @@ export function AuthForm({
           disabled={submitting}
           required
         />
-        <div id={`auth-${name}-error`} className="grid gap-1">
-          {errorMessages(name)}
-        </div>
+        {invalid && (
+          <div id={`auth-${name}-error`} className="grid gap-1">
+            {errorMessages(name)}
+          </div>
+        )}
       </div>
     );
   };
@@ -115,9 +117,11 @@ export function AuthForm({
           disabled={submitting}
           required
         />
-        <div id={`auth-${name}-error`} className="grid gap-1">
-          {errorMessages(name)}
-        </div>
+        {invalid && (
+          <div id={`auth-${name}-error`} className="grid gap-1">
+            {errorMessages(name)}
+          </div>
+        )}
       </div>
     );
   };
