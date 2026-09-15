@@ -2,11 +2,11 @@
 
 ## Status
 
-Aceito.
+Aceito. A linha de PHP foi revisada em 2026-09-15 — ver **Estado efetivo da implementação**.
 
 ## Data
 
-2026-09-14
+2026-09-14 (decisão) · 2026-09-15 (revisão da linha de PHP)
 
 ## Contexto
 
@@ -25,6 +25,8 @@ Linha de base inicial de runtime:
 - PostgreSQL `18.6` / linha de patch suportada do PostgreSQL `18.x`
 
 Os lockfiles e as definições de container registram as versões efetivamente resolvidas pelo projeto.
+
+A linha de PHP acima foi posteriormente revisada durante a implementação. A decisão original está preservada como registro histórico; o runtime em uso está descrito em **Estado efetivo da implementação**.
 
 ## Justificativa
 
@@ -47,6 +49,39 @@ O Node.js 24 é um release LTS. O Node.js 26 é "current" e não LTS no momento 
 ### PostgreSQL 18
 
 O PostgreSQL 18 é a linha major estável atual. Os releases de patch devem permanecer atualizados, especialmente quando o upstream inclui correções de segurança.
+
+## Estado efetivo da implementação
+
+**Revisado em:** 2026-09-15
+
+A linha de base acima registra a decisão tomada em 2026-09-14, antes do bootstrap. Durante a implementação, a imagem do backend foi consolidada em PHP 8.3, e é esse o runtime efetivamente construído, testado e validado.
+
+Versões conferidas nos containers do projeto:
+
+| Componente | Decidido (2026-09-14) | Em uso (2026-09-15) |
+| --- | --- | --- |
+| PHP | `8.5.x` | `8.3.33` — `docker/api/Dockerfile`: `php:8.3-cli-bookworm` |
+| Laravel | `13.x` | `13.31.0` |
+| Node.js | `24.x` LTS | `24.21.0` |
+| Next.js | `16.3.3` ou patch `16.3.x` posterior | `16.3.3` |
+| PostgreSQL | `18.6` / linha `18.x` | `18.6` |
+
+Apenas a linha de PHP diverge. Os demais componentes correspondem à decisão original.
+
+### Por que a divergência é mantida
+
+- O Laravel 13 suporta PHP 8.3 a 8.5, como já registrado na justificativa acima. O 8.3 está dentro da faixa suportada pelo framework escolhido, portanto não se trata de um runtime fora de suporte.
+- `apps/api/composer.json` declara `"php": "^8.3"`, coerente com a imagem do container.
+- A suíte de testes do backend é executada em PHP 8.3 (76 testes, 327 asserções). Essa é a linha reproduzível e verificada do projeto.
+- Nenhum requisito de produto, dependência ou aviso de segurança exige recursos específicos do PHP 8.5.
+
+Alterar o runtime apenas para alinhar a documentação reabriria build e validação do backend sem ganho técnico. A correção adequada, neste momento, é registrar o estado efetivo — e não mudar um runtime já validado.
+
+### Migração futura para PHP 8.5
+
+Tratada como mudança separada, se e quando houver motivo concreto: uma dependência que exija 8.5, um recurso de linguagem desejado ou o fim do suporte ao 8.3.
+
+Escopo previsto: atualizar `docker/api/Dockerfile` e a constraint em `apps/api/composer.json`, reconstruir a imagem e reexecutar a suíte de testes. Esta ADR não precisa ser substituída para isso — basta atualizar esta seção.
 
 ## Consequências
 
