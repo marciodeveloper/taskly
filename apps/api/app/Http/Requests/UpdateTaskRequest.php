@@ -37,6 +37,12 @@ class UpdateTaskRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'required', Rule::enum(TaskStatus::class)],
             'due_at' => ['sometimes', 'nullable', 'date'],
+            'tag_ids' => ['sometimes', 'array'],
+            'tag_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('tags', 'id')->where('user_id', $this->user()->id),
+            ],
             'project_id' => ['prohibited'],
             'position' => ['prohibited'],
             'completed_at' => ['prohibited'],
