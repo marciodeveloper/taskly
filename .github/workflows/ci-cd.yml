@@ -19,7 +19,8 @@ permissions:
 jobs:
   backend:
     name: Backend tests and Pint
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: apps/api
@@ -49,7 +50,8 @@ jobs:
 
   frontend:
     name: Frontend lint and build
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: apps/web
@@ -69,13 +71,26 @@ jobs:
 
   production-images:
     name: Production Compose and image builds
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Validate production Compose with configuration-only placeholders
         run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config --quiet
-      - name: Build production API and web images
-        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml build api web
+      - name: Build production API image with CI-only tag
+        run: docker build -f docker/api/Dockerfile.prod -t "taskly-ci-prod-api:${GITHUB_SHA}" apps/api
+      - name: Build production web image with CI-only tag
+        run: >-
+          docker build
+          --build-arg NEXT_PUBLIC_API_URL=https://taskly.webarthem.com.br
+          -f docker/web/Dockerfile.prod
+          -t "taskly-ci-prod-web:${GITHUB_SHA}"
+          apps/web
+      - name: Remove CI-only production image tags
+        if: always()
+        run: |
+          docker image rm -f "taskly-ci-prod-api:${GITHUB_SHA}" >/dev/null 2>&1 || true
+          docker image rm -f "taskly-ci-prod-web:${GITHUB_SHA}" >/dev/null 2>&1 || true
 
   deploy:
     name: Deploy exact CI-passed SHA
