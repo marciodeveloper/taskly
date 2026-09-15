@@ -128,7 +128,7 @@ Motivos:
 - comportamento direto de revogação/sessão;
 - nenhum requisito de produto justifica a complexidade de um JWT próprio.
 
-A topologia final de deploy (mesmo domínio pai versus origens de desenvolvimento local) precisa estar refletida na configuração de stateful domains do Sanctum, cookies, CORS e CSRF.
+A topologia final de deploy usa um único origin público, `https://taskly.webarthem.com.br`, com Nginx roteando frontend e backend. Essa escolha reduz a superfície de CORS e mantém Sanctum, cookies e CSRF no mesmo origin.
 
 ### Recuperação de senha
 
@@ -261,7 +261,7 @@ Regras de segurança:
 - autorizar leitura/exclusão de anexos pela propriedade da tarefa;
 - evitar que anexos privados de tarefa sejam publicamente enumeráveis por padrão.
 
-O backend concreto de storage pode começar com armazenamento local compatível com Laravel e evoluir para object storage compatível com S3 no deploy, se necessário.
+Em produção, os anexos privados ficam em volume Docker persistente montado em `storage/app/private/task-attachments`, preservando os arquivos entre recriações do container da API.
 
 ## 14. Arquitetura de testes
 
@@ -288,31 +288,69 @@ A estratégia prioriza risco e comportamento, em vez de perseguir um percentual 
 
 ## 15. Docker e desenvolvimento local
 
-A topologia pretendida para local/desenvolvimento é Docker Compose com serviços separados para, no mínimo:
+A topologia para local/desenvolvimento usa Docker Compose com serviços separados para:
 
 - web;
 - api;
 - PostgreSQL;
-- Mailpit, para inspecionar e-mails em desenvolvimento;
-- Redis apenas se justificado por uso de sessão/cache/fila.
+- Mailpit, para inspecionar e-mails em desenvolvimento.
 
-O Mailpit é infraestrutura de desenvolvimento e não faz parte de um deploy de produção.
+O Mailpit é infraestrutura de desenvolvimento e não faz parte do deploy de produção.
 
-Uma pessoa contribuindo deve, eventualmente, conseguir subir a aplicação completa a partir do README do repositório, sem depender de instalações de PHP/Node/PostgreSQL específicas do host.
+Uma pessoa contribuindo consegue subir a aplicação completa a partir do README do repositório sem depender de instalações específicas de PHP/Node/PostgreSQL no host.
 
-## 16. Direção de CI/CD
+## 16. CI/CD e topologia de produção
 
-O GitHub Actions deve, eventualmente, validar no mínimo:
+O workflow versionado em `.github/workflows/ci-cd.yml` separa as validações em três frentes:
 
-- instalação de dependências do backend;
-- lint/checagens estáticas do backend, quando escolhidos;
-- testes automatizados do backend;
-- instalação de dependências do frontend;
-- lint/typecheck do frontend;
-- testes do frontend;
-- builds de produção onde for prático.
+- backend: instalação de dependências, testes Laravel e Pint;
+- frontend: `npm ci`, ESLint e build Next.js;
+- produção: validação do Compose e build das imagens de API e web.
 
-Automação de deploy é um stretch goal, depois que o escopo obrigatório da aplicação estiver estável.
+O job de deploy depende dessas validações e foi desenhado para publicar exatamente o `GITHUB_SHA`, em vez de fazer deploy do estado genérico de uma branch. Pushes em `feat/visual-polish` executam CI sem deploy automático; pushes em `main` podem seguir para produção depois dos checks, e `workflow_dispatch` permite disparo explícito quando o workflow estiver disponível na default branch.
+
+A primeira publicação foi feita manualmente por SHA exato depois da execução local da mesma bateria de validações, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Esse bootstrap manual não é tratado como CI remoto aprovado. O primeiro SHA de aplicação publicado e validado foi `28b2984c47906066305716f802eb1ab03c4fca1b`.
+
+A topologia efetiva de produção é:
+
+```text
+Internet
+   |
+   | HTTPS
+   v
+Nginx
+   |
+   +--> /, frontend
+   |       |
+   |       v
+   |   Next.js
+   |   127.0.0.1:13080
+   |
+   +--> /api, /sanctum, /up
+           |
+           v
+       Laravel
+       127.0.0.1:18081
+           |
+           v
+       PostgreSQL
+       rede Docker interna
+```
+
+Características operacionais:
+
+- origem pública única: `https://taskly.webarthem.com.br`;
+- Nginx é a única entrada HTTP/HTTPS da aplicação;
+- Next.js e Laravel ficam vinculados somente ao loopback do host;
+- PostgreSQL não publica porta no host;
+- banco e anexos usam volumes Docker persistentes dedicados;
+- `APP_ENV=production` e `APP_DEBUG=false` no ambiente publicado;
+- TLS emitido por Let's Encrypt/Certbot, com renovação automática configurada;
+- HTTP é redirecionado para HTTPS;
+- Mailpit não existe em produção;
+- o ambiente público atual usa `MAIL_MAILER=log`, então recuperação externa por e-mail depende de SMTP real.
+
+O checkout de produção vive separado do diretório de desenvolvimento e o script `scripts/deploy-production.sh` recebe explicitamente um SHA de 40 caracteres, valida o ambiente, faz checkout detached desse commit, aplica migrations com `--force`, sobe os containers e executa health checks internos.
 
 ## 17. Fronteira da engenharia assistida por IA
 
