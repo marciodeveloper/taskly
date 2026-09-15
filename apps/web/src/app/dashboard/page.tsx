@@ -2,6 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  FolderPlus,
+  LogOut,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -44,7 +53,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
+    <form className="ds-form grid gap-4" onSubmit={submit}>
       <div>
         <label className="ds-label mb-1" htmlFor="project-name">
           Name <span className="ds-danger-text">*</span>
@@ -60,35 +69,14 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         {errors.name?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="project-name-error" key={error}>{error}</p>)}
       </div>
       <div>
-        <label className="ds-label mb-1" htmlFor="project-description">
-          Description
-        </label>
-        <textarea
-          id="project-description"
-          className="ds-input"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
+        <label className="ds-label mb-1" htmlFor="project-description">Description</label>
+        <textarea id="project-description" className="ds-input" value={description} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <div>
-        <label className="ds-label mb-1" htmlFor="project-color">
-          Color
-        </label>
+        <label className="ds-label mb-1" htmlFor="project-color">Color</label>
         <div className="flex gap-2">
-          <input
-            id="project-color"
-            className="ds-color-input"
-            type="color"
-            value={color}
-            onChange={(event) => setColor(event.target.value.toUpperCase())}
-          />
-          <input
-            className="ds-input uppercase"
-            value={color}
-            onChange={(event) => setColor(event.target.value)}
-            pattern="^#[0-9A-Fa-f]{6}$"
-            aria-label="Hex color"
-          />
+          <input id="project-color" className="ds-color-input" type="color" value={color} onChange={(event) => setColor(event.target.value.toUpperCase())} />
+          <input className="ds-input uppercase" value={color} onChange={(event) => setColor(event.target.value)} pattern="^#[0-9A-Fa-f]{6}$" aria-label="Hex color" />
         </div>
         {errors.color?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       </div>
@@ -142,6 +130,7 @@ export default function DashboardPage() {
   }, [selectedId]);
 
   const selected = useMemo(() => projects.find((project) => project.id === selectedId), [projects, selectedId]);
+  const initials = useMemo(() => user?.name?.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U", [user?.name]);
 
   async function saveProject(project: Project) {
     setProjects((current) => {
@@ -171,11 +160,11 @@ export default function DashboardPage() {
     }
   }
 
-  async function moveProject(direction: -1 | 1) {
-    if (!selected) return;
-    const index = projects.findIndex((project) => project.id === selected.id);
+  async function moveProject(projectId: number, direction: -1 | 1) {
+    const index = projects.findIndex((project) => project.id === projectId);
     const target = index + direction;
-    if (target < 0 || target >= projects.length) return;
+    if (index < 0 || target < 0 || target >= projects.length) return;
+    const previous = projects;
     const next = [...projects];
     [next[index], next[target]] = [next[target], next[index]];
     setProjects(next);
@@ -183,7 +172,7 @@ export default function DashboardPage() {
       await api.reorderProjects(next.map((project) => project.id));
       setFeedback("Project order updated.");
     } catch {
-      setProjects(projects);
+      setProjects(previous);
       setFeedback("Unable to update project order.");
     }
   }
@@ -193,59 +182,126 @@ export default function DashboardPage() {
   return (
     <main className="ds-shell">
       <header className="ds-topbar">
-        <div className="ds-topbar-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-6">
+        <div className="ds-topbar-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <p className="ds-brand">Taskly<span className="ds-brand-dot">.</span></p>
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="ds-user">{user.name}</span>
-            <button className="ds-button ds-button-ghost" onClick={async () => { await logout(); router.replace("/login"); }}>
-              Logout
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="ds-user-chip">
+              <span className="ds-avatar" aria-hidden="true">{initials}</span>
+              <span className="ds-user hidden sm:inline">{user.name}</span>
+            </div>
+            <button className="ds-button ds-button-ghost ds-button-compact" onClick={async () => { await logout(); router.replace("/login"); }}>
+              <LogOut className="ds-icon-sm" aria-hidden="true" />
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
+
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
         <aside className="ds-sidebar">
-          <div className="mb-5 flex items-center justify-between gap-2">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h1 className="ds-sidebar-title">Projects</h1>
-            <button className="ds-button ds-button-ghost" onClick={() => { setCreating(true); setEditing(false); }}>
-              + New
+            <button className="ds-button ds-button-ghost ds-button-compact" onClick={() => { setCreating(true); setEditing(false); }}>
+              <Plus className="ds-icon-sm" aria-hidden="true" />
+              New
             </button>
           </div>
           {loading && <p className="ds-meta">Loading projects...</p>}
           {error && <p className="ds-alert" role="alert">{error}</p>}
-          {!loading && !error && projects.length === 0 && <p className="ds-copy">No projects yet. Create one to get started.</p>}
-          <div className="grid gap-1">
-            {projects.map((project, index) => (
-              <div className={`ds-project-row ${project.id === selectedId ? "is-selected" : ""}`} key={project.id}>
-                <button className="ds-project-select flex items-center gap-2 p-3" onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}>
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
-                  <span className="truncate">{project.name}</span>
-                </button>
-                <div className="ds-project-actions flex pr-1">
-                  <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => { setSelectedId(project.id); void moveProject(-1); }}>↑</button>
-                  <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => { setSelectedId(project.id); void moveProject(1); }}>↓</button>
+          {!loading && !error && projects.length === 0 && (
+            <div className="ds-empty px-2 py-5">
+              <FolderPlus className="mx-auto mb-2 h-5 w-5 ds-accent-text" aria-hidden="true" />
+              <p className="ds-copy">No projects yet.</p>
+              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={() => setCreating(true)}>
+                <Plus className="ds-icon-sm" aria-hidden="true" />
+                Create project
+              </button>
+            </div>
+          )}
+          <div className="grid gap-1.5">
+            {projects.map((project, index) => {
+              const isSelected = project.id === selectedId;
+              return (
+                <div className={`ds-project-row ${isSelected ? "is-selected" : ""}`} key={project.id}>
+                  <button
+                    className="ds-project-select flex items-center gap-2.5 p-3"
+                    aria-current={isSelected ? "page" : undefined}
+                    onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}
+                  >
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
+                    <span className="truncate">{project.name}</span>
+                  </button>
+                  <div className="ds-project-actions flex pr-1">
+                    <button className="ds-icon-button" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)}>
+                      <ChevronUp className="ds-icon-sm" aria-hidden="true" />
+                    </button>
+                    <button className="ds-icon-button" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)}>
+                      <ChevronDown className="ds-icon-sm" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
+
         <section className="ds-workspace">
           {creating && <><h2 className="ds-page-title mb-6">New project</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
           {!creating && editing && selected && <><h2 className="ds-page-title mb-6">Edit project</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
-          {!creating && !editing && !selected && <div className="ds-empty"><h2 className="ds-empty-title">Choose a project</h2><p className="ds-copy mt-2">Create your first project to start organizing work.</p></div>}
-          {!creating && !editing && selected && <div className="min-w-0">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0"><div className="flex items-center gap-3"><span className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: selected.color ?? "#7F8894" }} aria-hidden="true" /><h2 className="ds-page-title">{selected.name}</h2></div><p className="ds-copy mt-3">{selected.description || "No description yet."}</p></div>
-              <div className="flex gap-2"><button className="ds-button ds-button-secondary" onClick={() => setEditing(true)}>Edit</button><button className="ds-button ds-button-danger" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
+          {!creating && !editing && !selected && (
+            <div className="ds-empty py-16">
+              <FolderPlus className="mx-auto mb-3 h-6 w-6 ds-accent-text" aria-hidden="true" />
+              <h2 className="ds-empty-title">Choose a project</h2>
+              <p className="ds-copy mt-2">Create your first project to start organizing work.</p>
+              <button className="ds-button ds-button-primary mt-5" onClick={() => setCreating(true)}>
+                <Plus className="ds-icon" aria-hidden="true" />
+                New project
+              </button>
             </div>
-            <TaskWorkspace key={selected.id} projectId={selected.id} />
-          </div>}
+          )}
+          {!creating && !editing && selected && (
+            <div className="min-w-0">
+              <div className="ds-workspace-header flex flex-wrap items-start justify-between gap-5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3.5 w-3.5 shrink-0 rounded-full ring-4 ring-white/5" style={{ backgroundColor: selected.color ?? "#7F8894" }} aria-hidden="true" />
+                    <h2 className="ds-page-title">{selected.name}</h2>
+                  </div>
+                  <p className="ds-copy mt-2 max-w-2xl">{selected.description || "No description yet."}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="ds-action-button" onClick={() => setEditing(true)}>
+                    <Pencil className="ds-icon-sm" aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button className="ds-action-button is-danger" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <TaskWorkspace key={selected.id} projectId={selected.id} />
+            </div>
+          )}
           {feedback && <p className={`ds-feedback mt-5 ${feedback.startsWith("Unable") ? "ds-feedback-error" : ""}`} role="status">{feedback}</p>}
         </section>
       </div>
-      {deleteDialogOpen && selected && <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-        <div className="ds-modal"><h2 className="ds-modal-title" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="ds-copy mt-2">This action cannot be undone.</p><div className="mt-6 flex flex-wrap justify-end gap-2"><button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button><button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>{deletePending ? "Deleting..." : "Delete project"}</button></div></div>
-      </div>}
+
+      {deleteDialogOpen && selected && (
+        <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+          <div className="ds-modal">
+            <h2 className="ds-modal-title" id="delete-title">Delete &quot;{selected.name}&quot;?</h2>
+            <p className="ds-copy mt-2">This action cannot be undone.</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button>
+              <button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>
+                <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                {deletePending ? "Deleting..." : "Delete project"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
