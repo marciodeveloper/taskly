@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import TaskKanban from "@/components/TaskKanban";
 import {
   ApiError,
   api,
@@ -324,7 +325,9 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [feedback, setFeedback] = useState("");
-  const [statusPendingId, setStatusPendingId] = useState<number | null>(null);
+  const [view, setView] = useState<"list" | "kanban">("list");
+  const pendingTaskIdsRef = useRef<Set<number>>(new Set());
+  const [pendingTaskIds, setPendingTaskIds] = useState<Set<number>>(new Set());
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [deletePending, setDeletePending] = useState(false);
 
@@ -349,11 +352,23 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
   }
 
   async function changeStatus(task: Task, status: TaskStatus) {
-    if (statusPendingId !== null || status === task.status) return;
-    setStatusPendingId(task.id); setFeedback("");
-    try { const saved = await api.updateTask(task.id, { status }); updateTask(saved); setFeedback("Task status updated."); }
-    catch { setFeedback("Unable to update task status."); }
-    finally { setStatusPendingId(null); }
+    if (pendingTaskIdsRef.current.has(task.id) || editingTask?.id === task.id || status === task.status) return;
+    const previous = task;
+    pendingTaskIdsRef.current.add(task.id);
+    setPendingTaskIds(new Set(pendingTaskIdsRef.current));
+    setFeedback("");
+    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status } : item));
+    try {
+      const saved = await api.updateTask(task.id, { status });
+      updateTask(saved);
+      setFeedback("Task status updated.");
+    } catch {
+      setTasks((current) => current.map((item) => item.id === task.id ? previous : item));
+      setFeedback("Unable to update task status. The task was restored.");
+    } finally {
+      pendingTaskIdsRef.current.delete(task.id);
+      setPendingTaskIds(new Set(pendingTaskIdsRef.current));
+    }
   }
 
   async function deleteTask() {
@@ -372,19 +387,20 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     onTagCreated: (tag: Tag) => setTags((current) => [...current, tag].sort((a, b) => a.name.localeCompare(b.name))),
   };
 
-  return <div className="mt-10 border-t border-slate-200 pt-8">
-    <div className="mb-5 flex items-center justify-between gap-4"><h3 className="text-xl font-bold text-slate-900">Tasks</h3>{!creating && !editingTask && <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setFeedback(""); }}>+ New task</button>}</div>
+  return <div className="mt-10 min-w-0 border-t border-slate-200 pt-8">
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h3 className="text-xl font-bold text-slate-900">Tasks</h3><div className="flex flex-wrap items-center gap-3"><div className="inline-flex rounded-lg border border-slate-300 p-0.5" aria-label="Task view"><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "list" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "list"} onClick={() => setView("list")} type="button">List</button><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "kanban" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "kanban"} onClick={() => setView("kanban")} type="button">Kanban</button></div>{!creating && !editingTask && <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setFeedback(""); }}>+ New task</button>}</div></div>
     {creating && <TaskForm {...formProps} onCancel={() => setCreating(false)} />}
     {editingTask && <TaskForm {...formProps} task={editingTask} onCancel={() => setEditingTask(null)} />}
     {loading && <p className="text-sm text-slate-500">Loading tasks...</p>}
     {loadError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p>}
     {!loading && !loadError && tasks.length === 0 && !creating && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">No tasks yet. Create one to plan the next step.</p>}
-    {!loading && !loadError && tasks.length > 0 && <div className="mt-5 grid gap-3">{tasks.map((task) => <article className={`rounded-xl border p-4 ${task.status === "completed" ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"}`} key={task.id}>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className={`font-semibold text-slate-900 ${task.status === "completed" ? "line-through decoration-slate-400" : ""}`}>{task.title}</h4>{task.short_description && <p className="mt-1 text-sm text-slate-600">{task.short_description}</p>}{task.due_at && <p className="mt-2 text-xs font-medium text-slate-500">Due · {formatDateTime(task.due_at)}</p>}</div><select className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 disabled:opacity-60" aria-label={`Status for ${task.title}`} disabled={statusPendingId !== null} value={task.status} onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
+    {!loading && !loadError && tasks.length > 0 && view === "kanban" && <TaskKanban tasks={tasks} statuses={statuses} pendingTaskIds={pendingTaskIds} editingTaskId={editingTask?.id ?? null} onMove={(task, status) => void changeStatus(task, status)} onEdit={(task) => { setEditingTask(task); setCreating(false); setFeedback(""); }} onDelete={(task) => { setTaskToDelete(task); setFeedback(""); }} />}
+    {!loading && !loadError && tasks.length > 0 && view === "list" && <div className="mt-5 grid gap-3">{tasks.map((task) => <article className={`rounded-xl border p-4 ${task.status === "completed" ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"}`} key={task.id}>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className={`font-semibold text-slate-900 ${task.status === "completed" ? "line-through decoration-slate-400" : ""}`}>{task.title}</h4>{task.short_description && <p className="mt-1 text-sm text-slate-600">{task.short_description}</p>}{task.due_at && <p className="mt-2 text-xs font-medium text-slate-500">Due · {formatDateTime(task.due_at)}</p>}</div><select className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 disabled:opacity-60" aria-label={`Status for ${task.title}`} disabled={pendingTaskIds.has(task.id) || editingTask?.id === task.id} value={task.status} onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
       {task.description && <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{task.description}</p>}
       {task.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Tags">{task.tags.map((tag) => <TagChip tag={tag} key={tag.id} />)}</div>}
       {task.attachments.length > 0 && <ul className="mt-3 grid gap-2">{task.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} />)}</ul>}
-      <div className="mt-4 flex gap-3 text-sm font-semibold"><button className="text-indigo-600 hover:underline" onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>Edit</button><button className="text-red-700 hover:underline" onClick={() => { setTaskToDelete(task); setFeedback(""); }}>Delete</button></div>
+      <div className="mt-4 flex gap-3 text-sm font-semibold"><button className="text-indigo-600 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>Edit</button><button className="text-red-700 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setTaskToDelete(task); setFeedback(""); }}>Delete</button></div>
     </article>)}</div>}
     {feedback && <p className={`mt-4 text-sm font-medium ${feedback.startsWith("Unable") ? "text-red-700" : "text-emerald-700"}`} role="status">{feedback}</p>}
     {taskToDelete && <div className="fixed inset-0 z-20 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-task-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-task-title">Delete &quot;{taskToDelete.title}&quot;?</h2><p className="mt-2 text-slate-600">This action and its attachments cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" disabled={deletePending} onClick={() => setTaskToDelete(null)}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" disabled={deletePending} onClick={() => void deleteTask()}>{deletePending ? "Deleting..." : "Delete task"}</button></div></div></div>}
