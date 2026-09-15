@@ -1,0 +1,263 @@
+/* Final product-level visual refinements layered over the core Taskly design system. */
+
+body {
+  background:
+    radial-gradient(circle at 18% -8%, rgba(41, 198, 211, 0.055), transparent 32rem),
+    linear-gradient(180deg, #0a0c0e 0%, #0b0d0f 46%, #090b0d 100%);
+}
+
+.ds-topbar-inner,
+.ds-shell > .mx-auto.grid {
+  max-width: 90rem !important;
+}
+
+.ds-topbar {
+  background: rgba(9, 11, 13, 0.9);
+  border-bottom-color: rgba(82, 96, 113, 0.28);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+}
+
+.ds-topbar-inner { min-height: 66px; }
+.ds-brand { font-size: 21px; letter-spacing: -0.045em; }
+.ds-avatar {
+  width: 32px;
+  height: 32px;
+  background: rgba(41, 198, 211, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(41, 198, 211, 0.04);
+}
+
+.ds-shell > .mx-auto.grid {
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2rem;
+  padding-top: 2.25rem;
+  padding-bottom: 3rem;
+}
+
+.ds-sidebar {
+  position: sticky;
+  top: 90px;
+  padding: 16px;
+  background: rgba(17, 20, 24, 0.76);
+  border-color: rgba(82, 96, 113, 0.34);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.015), 0 18px 46px rgba(0, 0, 0, 0.12);
+}
+.ds-sidebar-title { color: #aeb7c2; }
+.ds-project-row { border-radius: 9px; }
+.ds-project-row:hover,
+.ds-project-row:focus-within {
+  background: rgba(36, 42, 49, 0.54);
+  border-color: rgba(82, 96, 113, 0.26);
+}
+.ds-project-row.is-selected {
+  background: rgba(41, 198, 211, 0.075);
+  border-color: rgba(41, 198, 211, 0.22);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.ds-workspace { padding-top: 4px; }
+.ds-workspace-header {
+  padding: 10px 0 26px;
+  border-bottom-color: rgba(82, 96, 113, 0.31);
+}
+.ds-page-title { font-size: clamp(30px, 3vw, 36px); font-weight: 720; }
+.ds-section-title { font-size: 21px; }
+
+.ds-task-workspace { margin-top: 24px; }
+.ds-task-toolbar {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom-color: rgba(82, 96, 113, 0.26);
+}
+
+.ds-view-toggle {
+  background: rgba(9, 11, 13, 0.64);
+  border-color: rgba(82, 96, 113, 0.34);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.018);
+}
+.ds-view-option { min-height: 36px; }
+.ds-view-option[aria-pressed="true"] {
+  box-shadow: 0 5px 16px rgba(41, 198, 211, 0.1), inset 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.ds-button-primary {
+  background: #2bc6d3;
+  border-color: rgba(89, 224, 233, 0.42);
+  box-shadow: 0 8px 22px rgba(41, 198, 211, 0.11), inset 0 1px rgba(255,255,255,0.14);
+}
+.ds-button-primary:hover:not(:disabled) {
+  background: #39d0dc;
+  box-shadow: 0 10px 24px rgba(41, 198, 211, 0.16), inset 0 1px rgba(255,255,255,0.16);
+}
+
+.ds-action-button {
+  min-height: 32px;
+  padding: 5px 9px;
+  background: rgba(29, 34, 40, 0.5);
+  border-color: rgba(82, 96, 113, 0.42);
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 640;
+  box-shadow: inset 0 1px rgba(255,255,255,0.012);
+}
+.ds-action-button:hover:not(:disabled) {
+  background: rgba(36, 42, 49, 0.78);
+  border-color: rgba(106, 122, 140, 0.66);
+  box-shadow: none;
+}
+.ds-action-button.is-danger {
+  color: #f28c91;
+  background: rgba(239, 114, 119, 0.035);
+  border-color: rgba(239, 114, 119, 0.15);
+}
+.ds-action-button.is-danger:hover:not(:disabled) {
+  color: #ffa3a7;
+  background: rgba(239, 114, 119, 0.085);
+  border-color: rgba(239, 114, 119, 0.28);
+}
+
+.ds-task-card {
+  padding: 16px 18px;
+  background: rgba(20, 24, 28, 0.82);
+  border-color: rgba(82, 96, 113, 0.34);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.012);
+}
+.ds-task-card:hover {
+  background: rgba(23, 27, 32, 0.9);
+  border-color: rgba(106, 122, 140, 0.56);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.1);
+}
+.ds-task-card.is-completed {
+  background: rgba(20, 24, 28, 0.82);
+  border-color: rgba(72, 202, 141, 0.22);
+  box-shadow: inset 0 1px rgba(72, 202, 141, 0.08);
+}
+.ds-task-card[data-status="in_progress"] { box-shadow: inset 0 1px rgba(41, 198, 211, 0.1); }
+.ds-task-card[data-status="completed"] { box-shadow: inset 0 1px rgba(72, 202, 141, 0.09); }
+.ds-task-description { color: #9fa9b5; }
+.ds-task-actions {
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(82, 96, 113, 0.22);
+}
+
+.ds-status-control {
+  min-height: 34px;
+  background: rgba(9, 11, 13, 0.58);
+  border-color: rgba(82, 96, 113, 0.46);
+  border-radius: 8px;
+  font-size: 11.5px;
+}
+.ds-status-control:hover:not(:disabled) { border-color: rgba(106, 122, 140, 0.72); }
+
+.ds-tag {
+  min-height: 23px;
+  background: rgba(36, 42, 49, 0.58);
+  border-color: rgba(82, 96, 113, 0.36);
+}
+.ds-attachment {
+  background: rgba(17, 20, 24, 0.56);
+  border-color: rgba(82, 96, 113, 0.34);
+}
+
+.ds-kanban-board {
+  margin-top: 14px;
+  padding-bottom: 8px;
+}
+.ds-kanban-grid {
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 10px;
+  min-width: 910px;
+}
+.ds-kanban-column {
+  padding: 10px;
+  background: rgba(17, 20, 24, 0.48);
+  border-color: rgba(82, 96, 113, 0.32);
+  border-radius: 12px;
+}
+.ds-kanban-column:has(.ds-kanban-heading[data-status="in_progress"]) { box-shadow: inset 0 1px rgba(41, 198, 211, 0.1); }
+.ds-kanban-column:has(.ds-kanban-heading[data-status="completed"]) { box-shadow: inset 0 1px rgba(72, 202, 141, 0.08); }
+.ds-kanban-card {
+  padding: 14px;
+  background: rgba(20, 24, 28, 0.9);
+  border-color: rgba(82, 96, 113, 0.38);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.012);
+}
+.ds-kanban-card:hover {
+  border-color: rgba(106, 122, 140, 0.62);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+.ds-kanban-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top-color: rgba(82, 96, 113, 0.22);
+}
+.ds-kanban-footer .ds-status-control {
+  min-height: 32px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.ds-kanban-footer .ds-task-actions {
+  justify-content: flex-end;
+  margin-top: 9px;
+  padding-top: 0;
+  border-top: 0;
+}
+.ds-kanban-empty {
+  min-height: 72px;
+  color: #5f6975;
+}
+.ds-kanban-heading { letter-spacing: 0.015em; }
+
+.ds-empty {
+  border-radius: 12px;
+  background: rgba(17, 20, 24, 0.28);
+  border: 1px dashed rgba(82, 96, 113, 0.26);
+}
+
+.ds-form {
+  background: rgba(17, 20, 24, 0.68);
+  border-color: rgba(82, 96, 113, 0.42);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+}
+
+@media (min-width: 1280px) {
+  .ds-kanban-grid { min-width: 0; }
+}
+
+@media (max-width: 1023px) {
+  .ds-shell > .mx-auto.grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .ds-sidebar {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .ds-topbar-inner { min-height: 58px; }
+  .ds-shell > .mx-auto.grid { padding-top: 1.1rem; }
+  .ds-sidebar { padding: 13px; }
+  .ds-sidebar > .grid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .ds-sidebar > .grid::-webkit-scrollbar { display: none; }
+  .ds-project-row {
+    flex: 0 0 min(76vw, 240px);
+  }
+  .ds-workspace-header { padding-bottom: 18px; }
+  .ds-page-title { font-size: 27px; }
+  .ds-task-toolbar { gap: 12px; }
+  .ds-task-card { padding: 14px; }
+  .ds-task-actions { justify-content: flex-start; }
+  .ds-kanban-grid {
+    grid-template-columns: repeat(4, minmax(236px, 1fr));
+    min-width: 974px;
+  }
+}

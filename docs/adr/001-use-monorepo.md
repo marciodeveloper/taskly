@@ -1,25 +1,25 @@
-# ADR-001 — Use a monorepo for Taskly
+# ADR-001 — Usar um monorepo para o Taskly
 
 ## Status
 
-Accepted.
+Aceito.
 
-## Context
+## Contexto
 
-Taskly is one product with two application runtimes:
+O Taskly é um produto só com dois runtimes de aplicação:
 
-- a Laravel/PHP backend;
-- a Next.js/React/TypeScript frontend.
+- um backend Laravel/PHP;
+- um frontend Next.js/React/TypeScript.
 
-The technical challenge has a short delivery window and requires the complete source code, documentation, prompts, and architecture decisions to be easy to review.
+O desafio técnico tem uma janela de entrega curta e exige que o código-fonte completo, a documentação, os prompts e as decisões de arquitetura sejam fáceis de revisar.
 
-Using separate repositories would add coordination overhead without providing a meaningful product benefit for this scope.
+Usar repositórios separados adicionaria custo de coordenação sem trazer benefício real de produto para este escopo.
 
-## Decision
+## Decisão
 
-Taskly will use a single Git repository containing both applications and shared project documentation.
+O Taskly usará um único repositório Git contendo as duas aplicações e a documentação compartilhada do projeto.
 
-Target layout:
+Layout alvo:
 
 ```text
 taskly/
@@ -33,33 +33,33 @@ taskly/
 └── README.md
 ```
 
-## Consequences
+## Consequências
 
-### Positive
+### Positivas
 
-- one clone contains the complete technical case;
-- frontend/backend changes can be reviewed together;
-- CI can validate both applications from one workflow boundary;
-- documentation and AI-development logs remain close to the code they describe;
-- local Docker orchestration is simpler to explain and operate;
-- release/demo preparation is easier within the challenge timeframe.
+- um clone contém o case técnico completo;
+- mudanças de frontend e backend podem ser revisadas juntas;
+- a CI pode validar as duas aplicações a partir de uma única fronteira de workflow;
+- a documentação e os registros de desenvolvimento assistido por IA ficam próximos do código que descrevem;
+- a orquestração local com Docker fica mais simples de explicar e operar;
+- preparar release/demo fica mais fácil dentro do prazo do desafio.
 
 ### Trade-offs
 
-- the repository contains different ecosystems and dependency managers;
-- CI jobs must be scoped so PHP and Node pipelines remain independent;
-- tooling should avoid assuming that all packages share one runtime.
+- o repositório contém ecossistemas e gerenciadores de dependência diferentes;
+- os jobs de CI precisam ser delimitados para que os pipelines de PHP e Node permaneçam independentes;
+- o tooling deve evitar assumir que todos os pacotes compartilham um mesmo runtime.
 
-## Alternatives considered
+## Alternativas consideradas
 
-### Separate `taskly-api` and `taskly-web` repositories
+### Repositórios separados `taskly-api` e `taskly-web`
 
-Rejected for this challenge because it adds repository, versioning, documentation, and review overhead without a requirement for independent ownership or release cycles.
+Rejeitada para este desafio porque adiciona custo de repositório, versionamento, documentação e revisão sem que haja requisito de propriedade ou ciclos de release independentes.
 
-### Laravel-only repository with server-rendered frontend
+### Repositório apenas Laravel com frontend renderizado no servidor
 
-Rejected as the target architecture intentionally demonstrates Laravel as the backend/domain layer and Next.js/React as the frontend product layer.
+Rejeitada porque a arquitetura alvo demonstra intencionalmente o Laravel como camada de backend/domínio e o Next.js/React como camada de produto no frontend.
 
-## Review trigger
+## Gatilho de revisão
 
-Revisit this decision only if the product evolves into independently owned/deployed services where repository separation creates measurable operational or organizational value.
+Revisitar esta decisão apenas se o produto evoluir para serviços com propriedade e deploy independentes, em que a separação de repositórios gere valor operacional ou organizacional mensurável.

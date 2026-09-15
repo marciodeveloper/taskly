@@ -1,16 +1,22 @@
 # Taskly
 
-Taskly is a personal task-management web application being developed as a senior Fullstack technical challenge.
+O Taskly é uma aplicação web de gestão pessoal de tarefas, desenvolvida como desafio técnico para a vaga de Fullstack sênior.
 
-The project is intentionally following a **spec-driven, AI-assisted, human-reviewed engineering process**. The initial product specification and architecture decisions were committed before framework bootstrapping so the repository history reflects how the implementation was actually planned and reviewed.
+O projeto segue intencionalmente um **processo de engenharia spec-driven, assistido por IA e revisado por humanos**. A especificação inicial do produto e as decisões de arquitetura foram commitadas antes do bootstrap dos frameworks, de modo que o histórico do repositório reflete como a implementação foi de fato planejada e revisada.
 
-## Current status
+## Status atual
 
-**Phase:** specification and architecture.
+**Fase:** aplicação implementada e publicada em ambiente público de demonstração.
 
-No application framework has been bootstrapped yet.
+As duas aplicações estão funcionais e orquestradas por Docker Compose: cadastro, login, recuperação de senha, projetos, tarefas, tags, anexos privados, visualizações em lista e Kanban com drag-and-drop, e a interface localizada em pt-BR.
 
-## Planned stack
+## Demo online
+
+**https://taskly.webarthem.com.br**
+
+O ambiente público usa HTTPS, Nginx como reverse proxy e containers de produção separados para Next.js, Laravel e PostgreSQL. O cadastro é aberto, então a avaliação pode ser feita diretamente pela rota `/register` sem uma credencial pública fixa.
+
+## Stack
 
 ### Backend
 
@@ -18,7 +24,7 @@ No application framework has been bootstrapped yet.
 - Laravel
 - Laravel Sanctum
 - PostgreSQL
-- Pest/PHPUnit
+- PHPUnit
 
 ### Frontend
 
@@ -26,16 +32,19 @@ No application framework has been bootstrapped yet.
 - React
 - TypeScript
 - Tailwind CSS
-- Playwright for end-to-end coverage
+- lucide-react (ícones)
+- @dnd-kit/core (drag-and-drop do Kanban)
 
-### Engineering
+### Engenharia
 
-- REST/JSON API
+- API REST/JSON
 - Docker Compose
-- GitHub Actions
-- AI-assisted development with review traceability
+- GitHub Actions para CI/CD
+- Nginx + HTTPS em produção
+- Mailpit (captura de e-mail em desenvolvimento)
+- Desenvolvimento assistido por IA com rastreabilidade de revisão
 
-## Architecture
+## Arquitetura
 
 ```text
 Next.js / React / TypeScript
@@ -48,47 +57,225 @@ Next.js / React / TypeScript
         PostgreSQL
 ```
 
-Laravel is the authoritative backend/domain layer. It owns authentication, authorization, validation, business rules, persistence, uploads, and API behavior.
+O Laravel é a camada autoritativa de backend/domínio. Ele é dono de autenticação, autorização, validação, regras de negócio, persistência, uploads e do comportamento da API.
 
-Next.js owns the interactive product experience, including project navigation, task forms, list/Kanban views, responsive UI, and client interactions.
+O Next.js é dono da experiência interativa do produto, incluindo navegação entre projetos, formulários de tarefa, visualizações de lista/Kanban, interface responsiva e interações no cliente.
 
-The frontend does not access PostgreSQL directly.
+O frontend não acessa o PostgreSQL diretamente.
 
-## Required product scope
+## Instalação com Docker — recomendada
 
-Taskly will provide:
+Pré-requisitos: Docker e Docker Compose.
 
-- own e-mail/password registration and login;
-- persistent authenticated session;
-- multiple personal projects;
-- tasks inside projects;
-- task title;
-- short description;
-- full description;
-- deadline with date and time;
+As portas `3000`, `18000`, `8025` e `1025` precisam estar livres no host.
+
+```bash
+# 1. Configure o ambiente do backend
+cp apps/api/.env.example apps/api/.env
+
+# 2. Suba os serviços (postgres, api, web, mailpit)
+docker compose up -d --build
+
+# 3. Gere a chave da aplicação e crie o banco com dados de demonstração
+docker compose exec api php artisan key:generate
+docker compose exec api php artisan migrate --seed
+```
+
+Com os serviços no ar:
+
+| Serviço | URL |
+| --- | --- |
+| Taskly | <http://127.0.0.1:3000> |
+| API | <http://127.0.0.1:18000> |
+| Mailpit | <http://127.0.0.1:8025> |
+
+### Conta de demonstração
+
+```text
+demo@taskly.test
+password
+```
+
+Criada pelo `DemoSeeder` com três projetos, cinco etiquetas e nove tarefas cobrindo os quatro status, incluindo uma tarefa atrasada.
+
+> **Somente para desenvolvimento local e demonstração.** A senha é pública e o seeder não é executado quando `APP_ENV=production`.
+
+### Testes e verificações
+
+```bash
+# Backend
+docker compose exec api php artisan test
+docker compose exec api ./vendor/bin/pint --test
+
+# Frontend
+docker compose exec web npm run lint
+docker compose exec web npm run build
+```
+
+## Instalação sem Docker
+
+Caminho alternativo, para rodar as duas aplicações diretamente no host.
+
+### Pré-requisitos
+
+Backend:
+
+- PHP 8.3 ou superior (o `composer.json` exige `^8.3`);
+- extensão `pdo_pgsql` — obrigatória para conectar ao PostgreSQL;
+- Composer 2;
+- PostgreSQL 18 em execução, com banco e usuário criados.
+
+Frontend:
+
+- Node.js 24 LTS;
+- npm.
+
+As demais extensões exigidas (`mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`, `dom`, `filter`, `hash`, `iconv`, `libxml`, `pcre`, `phar`, `session`, `xmlwriter`) fazem parte de uma instalação padrão do PHP. Confira com:
+
+```bash
+cd apps/api && composer check-platform-reqs
+```
+
+### PostgreSQL
+
+Crie o banco e o usuário que o `.env.example` espera:
+
+```sql
+CREATE USER taskly WITH PASSWORD 'taskly';
+CREATE DATABASE taskly OWNER taskly;
+```
+
+### Backend
+
+```bash
+cd apps/api
+
+composer install
+cp .env.example .env
+php artisan key:generate
+
+# O .env.example já vem apontando para 127.0.0.1:5432
+php artisan migrate --seed
+php artisan serve --host=127.0.0.1 --port=18000
+```
+
+### Frontend
+
+Em outro terminal:
+
+```bash
+cd apps/web
+
+npm ci
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+`NEXT_PUBLIC_API_URL` tem `http://127.0.0.1:18000` como padrão embutido, então não é obrigatório configurá-lo. Para deixar explícito:
+
+```bash
+cp .env.example .env.local
+```
+
+### E-mail no modo nativo
+
+O `.env.example` usa `MAIL_MAILER=log`: a aplicação sobe sem nenhum servidor de e-mail e o link de redefinição de senha é gravado em `apps/api/storage/logs/laravel.log`.
+
+Para clicar no link em uma interface de verdade, aponte para um Mailpit local:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+```
+
+Isso funciona tanto com um Mailpit instalado no host quanto com o do `docker compose`, que publica a porta SMTP em `127.0.0.1:1025`.
+
+## Recuperação de senha
+
+O fluxo usa o Password Broker nativo do Laravel:
+
+1. na tela de login, clique em **Esqueci minha senha**;
+2. informe o e-mail (`demo@taskly.test` no ambiente de demonstração);
+3. abra o Mailpit em <http://127.0.0.1:8025>;
+4. abra a mensagem e clique em **Redefinir senha** — o link aponta para `/reset-password` no frontend;
+5. defina a nova senha e faça login com ela.
+
+Observações de segurança:
+
+- a solicitação responde sempre a mesma mensagem genérica, exista ou não uma conta com aquele e-mail;
+- os endpoints são limitados a 6 requisições por minuto;
+- o token expira em 60 minutos e só pode ser usado uma vez;
+- o token nunca é devolvido pela API.
+
+No ambiente público atual, `MAIL_MAILER=log`; portanto, o fluxo externo de recuperação por e-mail depende da configuração futura de um SMTP real. O restante da aplicação funciona normalmente.
+
+## CI/CD e publicação
+
+O workflow em `.github/workflows/ci-cd.yml` está preparado para validar backend, frontend e imagens de produção antes do deploy e para publicar um SHA exato na VPS.
+
+A primeira publicação foi inicializada manualmente por SHA exato após a mesma bateria de validações locais, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Isso não é apresentado como CI remoto aprovado: o workflow permanece versionado e será a via normal de deploy da `main` quando os runners estiverem disponíveis.
+
+A produção atualmente publicada usa:
+
+```text
+Internet
+   |
+ HTTPS
+   |
+ Nginx
+   |
+   +--> Next.js  127.0.0.1:13080
+   |
+   +--> Laravel  127.0.0.1:18081
+            |
+            v
+        PostgreSQL
+        rede Docker interna
+```
+
+O PostgreSQL não publica porta no host e os anexos privados usam volume persistente dedicado.
+
+## Escopo de produto exigido
+
+O Taskly oferece:
+
+- cadastro e login próprios por e-mail/senha;
+- sessão autenticada persistente;
+- múltiplos projetos pessoais;
+- tarefas dentro dos projetos;
+- título da tarefa;
+- descrição curta;
+- descrição completa;
+- prazo com data e hora;
 - tags;
-- attachments and/or photos;
-- editable task fields;
-- list view;
-- Kanban view;
-- status values:
-  - not started;
-  - in progress;
-  - completed;
-  - cancelled.
+- anexos e/ou fotos;
+- campos de tarefa editáveis;
+- visualização em lista;
+- visualização em Kanban;
+- valores de status:
+  - não iniciada;
+  - em andamento;
+  - concluída;
+  - cancelada.
 
-Additional enhancements are treated as stretch goals and must not compromise completion or reliability of the required scope.
+Melhorias adicionais são tratadas como stretch goals e não podem comprometer a conclusão ou a confiabilidade do escopo obrigatório.
 
-## Documentation
+## Idioma
 
-- [Product & Technical Specification](docs/SPEC.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [AI-Assisted Engineering Log](docs/AI_USAGE.md)
+A experiência do produto e a documentação do projeto estão em português do Brasil (pt-BR).
+
+Os contratos técnicos permanecem em inglês por serem contrato de API e de banco: valores de status (`not_started`, `in_progress`, `completed`, `cancelled`), campos de payload (`title`, `short_description`, `due_at`, `tag_ids`), rotas, chaves JSON, nomes de tabela e nomes de classe.
+
+No backend, a localização usa os mecanismos nativos do Laravel: `APP_LOCALE=pt_BR` e os arquivos de tradução em `apps/api/lang/pt_BR/`.
+
+## Documentação
+
+- [Especificação de Produto e Técnica](docs/SPEC.md)
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Registro de Engenharia Assistida por IA](docs/AI_USAGE.md)
 - [Architecture Decision Records](docs/adr/)
 
-## Repository direction
-
-The target monorepo structure is:
+## Estrutura do repositório
 
 ```text
 taskly/
@@ -97,42 +284,30 @@ taskly/
 │   └── web/              # Next.js
 ├── docs/
 │   └── adr/
-├── .github/
-│   └── workflows/
 ├── docker/
 ├── docker-compose.yml
 └── README.md
 ```
 
-The `apps/` directories will be created when the framework bootstrap phase begins.
+## Princípios de engenharia
 
-## Engineering principles
+- Segurança e autorização são aplicadas no servidor.
+- As regras de negócio permanecem no Laravel, não no navegador.
+- Os contratos de API são explícitos e testáveis.
+- Os testes automatizados focam em risco de negócio/segurança, não em um percentual arbitrário de cobertura.
+- Tecnologia só é adicionada quando há justificativa concreta de produto ou de engenharia.
+- Output gerado por IA é revisado, corrigido, testado e documentado antes de ser aceito.
+- Decisões de arquitetura e trade-offs relevantes são registrados conforme o projeto evolui.
 
-- Security and authorization are enforced server-side.
-- Business rules remain in Laravel, not in the browser.
-- API contracts are explicit and testable.
-- Automated tests focus on business/security risk, not arbitrary coverage percentage.
-- Technology is added only when it has a concrete product or engineering justification.
-- AI-generated output is reviewed, corrected, tested, and documented before acceptance.
-- Architectural decisions and meaningful trade-offs are recorded as the project evolves.
+## Desenvolvimento assistido por IA
 
-## AI-assisted development
+A IA é usada como acelerador de engenharia em tarefas como exploração de arquitetura, implementação, code review, geração de testes, refatoração, revisão de segurança e documentação.
 
-AI is used as an engineering accelerator for tasks such as architecture exploration, implementation, code review, test generation, refactoring, security review, and documentation.
+Ela **não** é tratada como autoridade autônoma de engenharia.
 
-It is **not** treated as an autonomous engineering authority.
+As interações relevantes — especialmente sugestões rejeitadas ou corrigidas — estão registradas em [`docs/AI_USAGE.md`](docs/AI_USAGE.md).
 
-Meaningful AI interactions — especially rejected or corrected suggestions — are recorded in [`docs/AI_USAGE.md`](docs/AI_USAGE.md).
+## Melhorias futuras
 
-## Next milestone
-
-The next milestone is framework/environment bootstrap:
-
-1. create the Laravel application under `apps/api`;
-2. create the Next.js application under `apps/web`;
-3. define Docker Compose services;
-4. configure PostgreSQL;
-5. finalize the authentication ADR;
-6. implement the first vertical slice: registration/authentication.
-
-Local setup instructions will be added as soon as the runtime environment exists.
+- Configuração de SMTP transacional para recuperação de senha no ambiente público.
+- Cobertura end-to-end versionada com Playwright.

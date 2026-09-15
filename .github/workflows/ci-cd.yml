@@ -1,0 +1,108 @@
+name: Taskly CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/visual-polish, main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the CI-passed SHA to production
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests and Pint
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated backend CI image
+        run: docker build -f docker/api/Dockerfile.ci -t "taskly-ci-api:${GITHUB_SHA}" apps/api
+      - name: Laravel tests and Pint
+        run: |
+          docker run --rm "taskly-ci-api:${GITHUB_SHA}" sh -lc '
+            cp .env.example .env
+            php artisan key:generate --force
+            php artisan test
+            ./vendor/bin/pint --test
+          '
+      - name: Remove backend CI image
+        if: always()
+        run: docker image rm -f "taskly-ci-api:${GITHUB_SHA}" >/dev/null 2>&1 || true
+
+  frontend:
+    name: Frontend lint and build
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated frontend CI image
+        run: docker build -f docker/web/Dockerfile -t "taskly-ci-web:${GITHUB_SHA}" apps/web
+      - name: ESLint and Next.js build
+        run: docker run --rm "taskly-ci-web:${GITHUB_SHA}" sh -lc 'npm run lint && npm run build'
+      - name: Remove frontend CI image
+        if: always()
+        run: docker image rm -f "taskly-ci-web:${GITHUB_SHA}" >/dev/null 2>&1 || true
+
+  production-images:
+    name: Production Compose and image builds
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production Compose with configuration-only placeholders
+        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config --quiet
+      - name: Build production API image with CI-only tag
+        run: docker build -f docker/api/Dockerfile.prod -t "taskly-ci-prod-api:${GITHUB_SHA}" apps/api
+      - name: Build production web image with CI-only tag
+        run: >-
+          docker build
+          --build-arg NEXT_PUBLIC_API_URL=https://taskly.webarthem.com.br
+          -f docker/web/Dockerfile.prod
+          -t "taskly-ci-prod-web:${GITHUB_SHA}"
+          apps/web
+      - name: Remove CI-only production image tags
+        if: always()
+        run: |
+          docker image rm -f "taskly-ci-prod-api:${GITHUB_SHA}" >/dev/null 2>&1 || true
+          docker image rm -f "taskly-ci-prod-web:${GITHUB_SHA}" >/dev/null 2>&1 || true
+
+  deploy:
+    name: Deploy exact CI-passed SHA
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy)
+    needs: [backend, frontend, production-images]
+    runs-on: self-hosted
+    environment: production
+    concurrency:
+      group: taskly-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify production host prerequisites
+        run: |
+          test -d /home/dev/apps/taskly-production/.git
+          test -f /home/dev/apps/taskly-production/.env.production
+          test -x scripts/deploy-production.sh
+      - name: Deploy the workflow commit locally by exact SHA
+        run: bash scripts/deploy-production.sh "$GITHUB_SHA"
+      - name: Public HTTPS smoke checks
+        run: |
+          for path in / /login /register /up; do
+            status=$(curl --silent --show-error --max-time 20 \
+              --output /dev/null --write-out '%{http_code}' \
+              "https://taskly.webarthem.com.br$path")
+            test "$status" = 200 || { echo "$path returned $status" >&2; exit 1; }
+          done
+          status=$(curl --silent --show-error --max-time 20 \
+            --output /dev/null --write-out '%{http_code}' \
+            https://taskly.webarthem.com.br/sanctum/csrf-cookie)
+          [[ "$status" =~ ^2[0-9][0-9]$ ]] || { echo "Sanctum returned $status" >&2; exit 1; }

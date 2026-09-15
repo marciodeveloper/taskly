@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attachment;
 use App\Models\Project;
+use App\Models\Tag;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProjectTest extends TestCase
@@ -135,6 +139,125 @@ class ProjectTest extends TestCase
             ->assertNoContent();
 
         $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+    }
+
+    public function test_deleting_an_empty_project_removes_only_that_project(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $other = Project::factory()->for($user)->create();
+
+        $this->actingAs($user)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+        $this->assertDatabaseHas('projects', ['id' => $other->id]);
+    }
+
+    public function test_deleting_a_project_cascades_to_its_tasks(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $tasks = Task::factory()->count(3)->for($project)->create();
+        $keptProject = Project::factory()->for($user)->create();
+        $keptTask = Task::factory()->for($keptProject)->create();
+
+        $this->actingAs($user)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+        foreach ($tasks as $task) {
+            $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+        }
+
+        // Another project's tasks must survive.
+        $this->assertDatabaseHas('tasks', ['id' => $keptTask->id]);
+    }
+
+    public function test_deleting_a_project_removes_task_tag_pivots_but_keeps_the_tags(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $task = Task::factory()->for($project)->create();
+        $tag = Tag::factory()->for($user)->create();
+        $task->tags()->attach($tag);
+
+        $this->actingAs($user)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('task_tag', ['task_id' => $task->id, 'tag_id' => $tag->id]);
+        // The tag belongs to the user, not to the task, so it must remain usable.
+        $this->assertDatabaseHas('tags', ['id' => $tag->id, 'user_id' => $user->id]);
+    }
+
+    public function test_deleting_a_project_removes_attachment_records_and_files(): void
+    {
+        Storage::fake(Attachment::DISK);
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $task = Task::factory()->for($project)->create();
+
+        $path = "users/{$user->id}/tasks/{$task->id}/anexo.txt";
+        Storage::disk(Attachment::DISK)->put($path, 'conteudo');
+        $attachment = Attachment::factory()->for($task)->create(['storage_path' => $path]);
+        Storage::disk(Attachment::DISK)->assertExists($path);
+
+        $this->actingAs($user)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('attachments', ['id' => $attachment->id]);
+        Storage::disk(Attachment::DISK)->assertMissing($path);
+    }
+
+    public function test_deleting_a_project_does_not_touch_another_users_attachment_files(): void
+    {
+        Storage::fake(Attachment::DISK);
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        Task::factory()->for($project)->create();
+
+        $stranger = User::factory()->create();
+        $strangerTask = Task::factory()->for(Project::factory()->for($stranger))->create();
+        $strangerPath = "users/{$stranger->id}/tasks/{$strangerTask->id}/anexo.txt";
+        Storage::disk(Attachment::DISK)->put($strangerPath, 'conteudo');
+        $strangerAttachment = Attachment::factory()->for($strangerTask)->create([
+            'storage_path' => $strangerPath,
+        ]);
+
+        $this->actingAs($user)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseHas('attachments', ['id' => $strangerAttachment->id]);
+        Storage::disk(Attachment::DISK)->assertExists($strangerPath);
+    }
+
+    public function test_project_payloads_expose_the_task_count(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        Task::factory()->count(2)->for($project)->create();
+        $empty = Project::factory()->for($user)->create();
+
+        $this->actingAs($user)->getJson('/api/projects')
+            ->assertOk()
+            ->assertJsonPath('data.0.tasks_count', 2)
+            ->assertJsonPath('data.1.tasks_count', 0);
+
+        $this->actingAs($user)->getJson("/api/projects/{$project->id}")
+            ->assertOk()
+            ->assertJsonPath('data.tasks_count', 2);
+
+        $this->actingAs($user)->getJson("/api/projects/{$empty->id}")
+            ->assertOk()
+            ->assertJsonPath('data.tasks_count', 0);
+    }
+
+    public function test_a_created_project_reports_a_task_count_of_zero(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/projects', ['name' => 'Novo projeto'])
+            ->assertCreated()
+            ->assertJsonPath('data.tasks_count', 0);
     }
 
     public function test_a_user_cannot_delete_another_users_project(): void

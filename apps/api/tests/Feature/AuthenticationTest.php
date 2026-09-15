@@ -93,7 +93,7 @@ class AuthenticationTest extends TestCase
             'email' => 'missing@example.com',
             'password' => 'wrong-password',
         ])->assertUnprocessable()
-            ->assertJson(['message' => 'The provided credentials are incorrect.']);
+            ->assertJson(['message' => 'As credenciais informadas estão incorretas.']);
         $this->assertGuest();
     }
 

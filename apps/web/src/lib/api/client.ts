@@ -14,6 +14,7 @@ export type Project = {
   description: string | null;
   color: string | null;
   position: number;
+  tasks_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -110,7 +111,7 @@ async function initializeCsrf(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new ApiError("Unable to initialize the secure session.", response.status);
+    throw new ApiError("Não foi possível iniciar a sessão segura.", response.status);
   }
 }
 
@@ -152,7 +153,7 @@ async function request<T>(
       if (response.status === 401) unauthorizedHandler?.();
 
       throw new ApiError(
-        body?.message ?? "The request could not be completed.",
+        body?.message ?? "Não foi possível concluir a requisição.",
         response.status,
         body?.errors ?? {},
       );
@@ -161,7 +162,7 @@ async function request<T>(
     return (body?.data ?? body) as T;
   }
 
-  throw new ApiError("The request could not be completed.", 419);
+  throw new ApiError("Não foi possível concluir a requisição.", 419);
 }
 
 async function requestBlob(path: string): Promise<Blob> {
@@ -184,7 +185,7 @@ async function requestBlob(path: string): Promise<Blob> {
       if (response.status === 401) unauthorizedHandler?.();
       const body = await response.json().catch(() => undefined);
       throw new ApiError(
-        body?.message ?? "Unable to retrieve this attachment.",
+        body?.message ?? "Não foi possível obter este anexo.",
         response.status,
       );
     }
@@ -192,7 +193,7 @@ async function requestBlob(path: string): Promise<Blob> {
     return response.blob();
   }
 
-  throw new ApiError("Unable to retrieve this attachment.", 419);
+  throw new ApiError("Não foi possível obter este anexo.", 419);
 }
 
 export const api = {
@@ -214,6 +215,23 @@ export const api = {
       true,
     ),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+  forgotPassword: (payload: { email: string }) =>
+    request<{ message: string }>(
+      "/api/auth/forgot-password",
+      { method: "POST", body: JSON.stringify(payload) },
+      true,
+    ),
+  resetPassword: (payload: {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+  }) =>
+    request<{ message: string }>(
+      "/api/auth/reset-password",
+      { method: "POST", body: JSON.stringify(payload) },
+      true,
+    ),
   me: () => request<User>("/api/me"),
   getProjects: () => request<Project[]>("/api/projects"),
   getProject: (id: number) => request<Project>(`/api/projects/${id}`),

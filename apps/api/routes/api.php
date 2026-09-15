@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
@@ -9,6 +10,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Guest endpoints. Throttled because they accept an arbitrary e-mail address.
+Route::post('/auth/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+    ->middleware('throttle:6,1');
+Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])
+    ->middleware('throttle:6,1');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/auth/logout', [AuthController::class, 'logout']);

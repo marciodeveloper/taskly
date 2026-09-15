@@ -1,7 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Columns3,
+  Download,
+  ExternalLink,
+  List,
+  Paperclip,
+  Pencil,
+  Plus,
+  Save,
+  Tag as TagIcon,
+  Trash2,
+  X,
+} from "lucide-react";
 import TaskKanban from "@/components/TaskKanban";
 import {
   ApiError,
@@ -12,36 +27,17 @@ import {
   type TaskPayload,
   type TaskStatus,
 } from "@/lib/api/client";
-
-const statuses: { value: TaskStatus; label: string }[] = [
-  { value: "not_started", label: "Not started" },
-  { value: "in_progress", label: "In progress" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
-function toLocalDateTime(value: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import type { Feedback } from "@/lib/feedback";
+import { formatDateTime, formatFileSize, toLocalDateTimeInput } from "@/lib/format";
+import { taskStatuses } from "@/lib/tasks/status";
 
 function TagChip({ tag }: { tag: Tag }) {
-  return <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-    {tag.color && <span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ backgroundColor: tag.color }} aria-hidden="true" />}
-    {tag.name}
-  </span>;
+  return (
+    <span className="ds-tag">
+      {tag.color && <span className="ds-tag-dot" style={{ backgroundColor: tag.color }} aria-hidden="true" />}
+      {tag.name}
+    </span>
+  );
 }
 
 function PersistedImagePreview({ attachment }: { attachment: Attachment }) {
@@ -66,10 +62,10 @@ function PersistedImagePreview({ attachment }: { attachment: Attachment }) {
     };
   }, [attachment.id]);
 
-  if (previewError) return <span className="text-xs text-red-700">Preview unavailable</span>;
-  if (!previewUrl) return <span className="text-xs text-slate-500">Loading preview...</span>;
+  if (previewError) return <span className="ds-danger-text text-xs">Pré-visualização indisponível</span>;
+  if (!previewUrl) return <span className="ds-meta">Carregando pré-visualização...</span>;
 
-  return <Image alt="" className="h-12 w-12 rounded-md border border-slate-200 object-cover" src={previewUrl} width={48} height={48} unoptimized />;
+  return <Image alt="" className="ds-thumbnail" src={previewUrl} width={48} height={48} unoptimized />;
 }
 
 function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDelete?: (attachment: Attachment) => void }) {
@@ -80,7 +76,7 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
     if (openPending) return;
     const previewTab = attachment.is_image ? window.open("about:blank", "_blank") : null;
     if (attachment.is_image && !previewTab) {
-      setOpenError("Your browser blocked the image tab. Allow popups for Taskly and try again.");
+      setOpenError("Seu navegador bloqueou a aba da imagem. Permita pop-ups para o Taskly e tente novamente.");
       return;
     }
     if (previewTab) previewTab.opener = null;
@@ -95,7 +91,7 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
       if (previewTab) {
         if (previewTab.closed) {
           URL.revokeObjectURL(objectUrl);
-          throw new Error("The image tab was closed before loading finished.");
+          throw new Error("A aba da imagem foi fechada antes do carregamento terminar.");
         }
         previewTab.location.replace(objectUrl);
         previewTab.focus();
@@ -111,39 +107,74 @@ function AttachmentItem({ attachment, onDelete }: { attachment: Attachment; onDe
       }
     } catch (error) {
       previewTab?.close();
-      setOpenError(error instanceof ApiError ? error.message : "Unable to open this attachment.");
+      setOpenError(error instanceof ApiError ? error.message : "Não foi possível abrir este anexo.");
     } finally {
       setOpenPending(false);
     }
   }
 
-  return <li className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-    {attachment.is_image && <PersistedImagePreview attachment={attachment} />}
-    <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-semibold text-slate-800">{attachment.original_name}</p>
-      <p className="text-xs text-slate-500">{attachment.mime_type} · {formatFileSize(attachment.size)}</p>
-    </div>
-    <button className="rounded-md px-2 py-1 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 focus:ring-2 focus:ring-indigo-500 disabled:opacity-60" disabled={openPending} onClick={() => void openAttachment()} type="button">{openPending ? "Loading..." : attachment.is_image ? "Open" : "Download"}</button>
-    {onDelete && <button className="rounded-md px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 focus:ring-2 focus:ring-red-500" onClick={() => onDelete(attachment)} type="button">Delete</button>}
-    {openError && <p className="w-full text-sm text-red-700" role="alert">{openError}</p>}
-  </li>;
+  return (
+    <li className="ds-attachment flex flex-wrap items-center gap-3">
+      {attachment.is_image && <PersistedImagePreview attachment={attachment} />}
+      <div className="min-w-0 flex-1">
+        <p className="ds-attachment-name truncate">{attachment.original_name}</p>
+        <p className="ds-meta">{attachment.mime_type} · {formatFileSize(attachment.size)}</p>
+      </div>
+      <button className="ds-action-button" disabled={openPending} onClick={() => void openAttachment()} type="button">
+        {attachment.is_image ? <ExternalLink className="ds-icon-sm" aria-hidden="true" /> : <Download className="ds-icon-sm" aria-hidden="true" />}
+        {openPending ? "Carregando..." : attachment.is_image ? "Abrir" : "Baixar"}
+      </button>
+      {onDelete && (
+        <button className="ds-action-button is-danger" onClick={() => onDelete(attachment)} type="button">
+          <Trash2 className="ds-icon-sm" aria-hidden="true" />
+          Excluir
+        </button>
+      )}
+      {openError && <p className="ds-danger-text w-full text-xs" role="alert">{openError}</p>}
+    </li>
+  );
 }
 
 const previewableImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function PendingImagePreview({ file }: { file: File }) {
-  const imageRef = useRef<HTMLImageElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const objectUrl = URL.createObjectURL(file);
-    if (imageRef.current) imageRef.current.src = objectUrl;
+    let cancelled = false;
+    const reader = new FileReader();
 
-    return () => URL.revokeObjectURL(objectUrl);
+    reader.onload = () => {
+      if (!cancelled && typeof reader.result === "string") {
+        setPreviewUrl(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+
+    return () => {
+      cancelled = true;
+
+      if (reader.readyState === FileReader.LOADING) {
+        reader.abort();
+      }
+    };
   }, [file]);
 
-  // This local blob URL is temporary and cannot be processed by the Next image optimizer.
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img ref={imageRef} alt={`Preview of ${file.name}`} className="h-12 w-12 shrink-0 rounded-md border border-slate-200 object-cover" />;
+  if (!previewUrl) {
+    return <span className="ds-meta">Carregando pré-visualização...</span>;
+  }
+
+  return (
+    <Image
+      src={previewUrl}
+      alt={`Pré-visualização de ${file.name}`}
+      className="ds-thumbnail"
+      width={48}
+      height={48}
+      unoptimized
+    />
+  );
 }
 
 type TaskFormProps = {
@@ -162,7 +193,7 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
   const [shortDescription, setShortDescription] = useState(task?.short_description ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "not_started");
-  const [dueAt, setDueAt] = useState(toLocalDateTime(task?.due_at ?? null));
+  const [dueAt, setDueAt] = useState(toLocalDateTimeInput(task?.due_at ?? null));
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>(task?.tags.map((tag) => tag.id) ?? []);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#6366F1");
@@ -173,6 +204,26 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
   const [creatingTag, setCreatingTag] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState<Attachment | null>(null);
   const [attachmentDeletePending, setAttachmentDeletePending] = useState(false);
+  const attachmentCancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!attachmentToDelete) return;
+
+    const focusFrame = window.requestAnimationFrame(() => attachmentCancelRef.current?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !attachmentDeletePending) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setAttachmentToDelete(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [attachmentDeletePending, attachmentToDelete]);
 
   function toggleTag(tagId: number) {
     setSelectedTagIds((current) => current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]);
@@ -188,7 +239,7 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
       setSelectedTagIds((current) => [...current, tag.id]);
       setNewTagName("");
     } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : "Unable to create this tag.");
+      setMessage(error instanceof ApiError ? error.message : "Não foi possível criar esta etiqueta.");
     } finally {
       setCreatingTag(false);
     }
@@ -226,13 +277,13 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
           if (!uploadFailure) {
             uploadFailure = error instanceof ApiError
               ? error.validationErrors.file?.[0] ?? error.message
-              : "The attachment upload could not be completed.";
+              : "Não foi possível concluir o envio do anexo.";
           }
         }
       }
       setPendingFiles(failedFiles);
       if (failedFiles.length > 0) {
-        setMessage(`Task saved and ${pendingFiles.length - failedFiles.length} attachment(s) uploaded. ${failedFiles.length} failed: ${uploadFailure} Submit again to retry them.`);
+        setMessage(`Tarefa salva e ${pendingFiles.length - failedFiles.length} anexo(s) enviado(s). ${failedFiles.length} falhou(aram): ${uploadFailure} Envie novamente para tentar de novo.`);
         return;
       }
       onSaved(saved);
@@ -241,7 +292,7 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
         setErrors(error.validationErrors);
         setMessage(error.message);
       } else {
-        setMessage("Unable to save this task.");
+        setMessage("Não foi possível salvar esta tarefa.");
       }
     } finally {
       setSaving(false);
@@ -259,85 +310,260 @@ function TaskForm({ projectId, availableTags, task, onCancel, onChanged, onSaved
       onChanged(changed);
       setAttachmentToDelete(null);
     } catch {
-      setMessage("Unable to delete this attachment.");
+      setMessage("Não foi possível excluir este anexo.");
     } finally {
       setAttachmentDeletePending(false);
     }
   }
 
-  return <form className="grid gap-5 rounded-xl border border-slate-200 bg-slate-50 p-5" onSubmit={submit}>
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-title">Title <span className="text-red-600">*</span></label>
-      <input id="task-title" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={title} onChange={(event) => setTitle(event.target.value)} aria-describedby={errors.title ? "task-title-error" : undefined} required />
-      {errors.title?.map((error) => <p className="mt-1 text-xs text-red-600" id="task-title-error" key={error}>{error}</p>)}
-    </div>
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-short-description">Short description</label>
-      <input id="task-short-description" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} maxLength={500} />
-      {errors.short_description?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
-    </div>
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-description">Description</label>
-      <textarea id="task-description" className="min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={description} onChange={(event) => setDescription(event.target.value)} />
-    </div>
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div><label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-status">Status</label><select id="task-status" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
-      <div><label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-due-at">Due date</label><input id="task-due-at" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-indigo-500" type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />{errors.due_at?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}</div>
-    </div>
-    <fieldset>
-      <legend className="text-sm font-semibold text-slate-700">Tags</legend>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {availableTags.length === 0 && <p className="text-sm text-slate-500">No tags yet.</p>}
-        {availableTags.map((tag) => { const selected = selectedTagIds.includes(tag.id); return <button key={tag.id} className={`rounded-full border px-3 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 ${selected ? "border-indigo-500 bg-indigo-50 text-indigo-800" : "border-slate-300 bg-white text-slate-700"}`} aria-pressed={selected} onClick={() => toggleTag(tag.id)} type="button">{selected ? "✓ " : ""}{tag.name}</button>; })}
+  return (
+    <form className="ds-form grid gap-5" onSubmit={submit}>
+      <div>
+        <label className="ds-label mb-1" htmlFor="task-title">Título <span className="ds-danger-text">*</span></label>
+        <input id="task-title" className="ds-input" value={title} onChange={(event) => setTitle(event.target.value)} aria-describedby={errors.title ? "task-title-error" : undefined} required />
+        {errors.title?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="task-title-error" key={error}>{error}</p>)}
       </div>
-      {errors.tag_ids?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-        <label className="sr-only" htmlFor="new-tag-name">New tag name</label><input id="new-tag-name" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="New tag name" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} maxLength={50} />
-        <label className="sr-only" htmlFor="new-tag-color">New tag color</label><input id="new-tag-color" className="h-10 w-12 rounded border border-slate-300 bg-white" type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value.toUpperCase())} />
-        <button className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60" disabled={creatingTag || !newTagName.trim()} onClick={() => void createTag()} type="button">{creatingTag ? "Adding..." : "Add tag"}</button>
+      <div>
+        <label className="ds-label mb-1" htmlFor="task-short-description">Descrição curta</label>
+        <input id="task-short-description" className="ds-input" value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} maxLength={500} />
+        {errors.short_description?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       </div>
-    </fieldset>
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="task-attachments">Add attachments</label>
-      <input id="task-attachments" className="block w-full rounded-lg border border-slate-300 bg-white text-sm text-slate-700 file:mr-3 file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" onChange={(event) => {
-        const files = Array.from(event.currentTarget.files ?? []);
-        if (files.length > 0) setPendingFiles((current) => [...current, ...files]);
-        event.currentTarget.value = "";
-      }} />
-      <p className="mt-1 text-xs text-slate-500">JPEG, PNG, WebP, PDF, or text; up to 10 MB each.</p>
-      {pendingFiles.length > 0 && <div className="mt-3" role="status"><h4 className="text-sm font-semibold text-slate-700">Pending attachments</h4><p className="mt-1 text-xs text-slate-500">These files upload after you save the task.</p><ul className="mt-2 grid gap-2">{pendingFiles.map((file, index) => <li className="flex items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm" key={`${file.name}-${file.lastModified}-${index}`}>{previewableImageTypes.has(file.type) && <PendingImagePreview file={file} />}<span className="min-w-0 flex-1 truncate">{file.name} · {formatFileSize(file.size)}</span><button className="font-semibold text-red-700 hover:underline disabled:opacity-60" disabled={saving} onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button">Remove</button></li>)}</ul></div>}
-    </div>
-    {persistedTask && persistedTask.attachments.length > 0 && <div><h4 className="text-sm font-semibold text-slate-700">Current attachments</h4><ul className="mt-2 grid gap-2">{persistedTask.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} onDelete={setAttachmentToDelete} />)}</ul></div>}
-    {message && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{message}</p>}
-    <div className="flex flex-wrap gap-2">
-      <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60" disabled={saving || creatingTag || attachmentDeletePending} type="submit">{saving ? (pendingFiles.length > 0 ? "Saving and uploading..." : "Saving...") : persistedTask ? "Save changes" : "Create task"}</button>
-      <button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-white disabled:opacity-60" disabled={saving || attachmentDeletePending} onClick={onCancel} type="button">Cancel</button>
-    </div>
-    {attachmentToDelete && <div className="fixed inset-0 z-30 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-attachment-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-attachment-title">Delete &quot;{attachmentToDelete.original_name}&quot;?</h2><p className="mt-2 text-slate-600">The private file will be permanently removed.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" disabled={attachmentDeletePending} onClick={() => void deleteAttachment()} type="button">{attachmentDeletePending ? "Deleting..." : "Delete attachment"}</button></div></div></div>}
-  </form>;
+      <div>
+        <label className="ds-label mb-1" htmlFor="task-description">Descrição</label>
+        <textarea id="task-description" className="ds-input" value={description} onChange={(event) => setDescription(event.target.value)} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="ds-label mb-1" htmlFor="task-status">Status</label>
+          <select id="task-status" className="ds-input" value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>
+            {taskStatuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="ds-label mb-1" htmlFor="task-due-at">Prazo</label>
+          <input id="task-due-at" className="ds-input" type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+          {errors.due_at?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
+        </div>
+      </div>
+      <fieldset>
+        <legend className="ds-label flex items-center gap-2"><TagIcon className="ds-icon-sm" aria-hidden="true" />Etiquetas</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {availableTags.length === 0 && <p className="ds-meta">Nenhuma etiqueta ainda.</p>}
+          {availableTags.map((tag) => {
+            const selected = selectedTagIds.includes(tag.id);
+            return <button key={tag.id} className="ds-tag" aria-pressed={selected} onClick={() => toggleTag(tag.id)} type="button">{selected ? "✓ " : ""}{tag.name}</button>;
+          })}
+        </div>
+        {errors.tag_ids?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <label className="sr-only" htmlFor="new-tag-name">Nome da nova etiqueta</label>
+          <input id="new-tag-name" className="ds-input" placeholder="Nome da nova etiqueta" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} maxLength={50} />
+          <label className="sr-only" htmlFor="new-tag-color">Cor da nova etiqueta</label>
+          <input id="new-tag-color" className="ds-color-input" type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value.toUpperCase())} />
+          <button className="ds-button ds-button-secondary" disabled={creatingTag || !newTagName.trim()} onClick={() => void createTag()} type="button">
+            <Plus className="ds-icon-sm" aria-hidden="true" />
+            {creatingTag ? "Adicionando..." : "Adicionar etiqueta"}
+          </button>
+        </div>
+      </fieldset>
+      <div>
+        <label className="ds-label mb-1" htmlFor="task-attachments">Adicionar anexos</label>
+        <input id="task-attachments" className="ds-file-input block w-full" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          if (files.length > 0) setPendingFiles((current) => [...current, ...files]);
+          event.currentTarget.value = "";
+        }} />
+        <p className="ds-meta mt-1">JPEG, PNG, WebP, PDF ou texto; até 10 MB cada.</p>
+        {pendingFiles.length > 0 && (
+          <div className="mt-3" role="status">
+            <h4 className="ds-label">Anexos pendentes</h4>
+            <p className="ds-meta mt-1">Estes arquivos são enviados depois que você salvar a tarefa.</p>
+            <ul className="mt-2 grid gap-2">
+              {pendingFiles.map((file, index) => (
+                <li className="ds-attachment flex items-center gap-3" key={`${file.name}-${file.lastModified}-${index}`}>
+                  {previewableImageTypes.has(file.type) && <PendingImagePreview file={file} />}
+                  <span className="ds-copy min-w-0 flex-1 truncate">{file.name} · {formatFileSize(file.size)}</span>
+                  <button className="ds-action-button is-danger" disabled={saving} onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button">
+                    <X className="ds-icon-sm" aria-hidden="true" />
+                    Remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      {persistedTask && persistedTask.attachments.length > 0 && (
+        <div>
+          <h4 className="ds-label">Anexos atuais</h4>
+          <ul className="mt-2 grid gap-2">{persistedTask.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} onDelete={setAttachmentToDelete} />)}</ul>
+        </div>
+      )}
+      {message && <p className="ds-alert" role="alert">{message}</p>}
+      <div className="ds-task-form-actions flex flex-wrap gap-2">
+        <button className="ds-button ds-button-primary" disabled={saving || creatingTag || attachmentDeletePending} type="submit">
+          <Save className="ds-icon-sm" aria-hidden="true" />
+          {saving ? (pendingFiles.length > 0 ? "Salvando e enviando..." : "Salvando...") : persistedTask ? "Salvar alterações" : "Criar tarefa"}
+        </button>
+        <button className="ds-button ds-button-secondary" disabled={saving || attachmentDeletePending} onClick={onCancel} type="button">Cancelar</button>
+      </div>
+
+      {attachmentToDelete && (
+        <div
+          className="ds-modal-overlay fixed inset-0 z-30 grid place-items-center p-4"
+          data-task-nested-dialog="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-attachment-title"
+        >
+          <div className="ds-modal">
+            <h2 className="ds-modal-title" id="delete-attachment-title">Excluir &quot;{attachmentToDelete.original_name}&quot;?</h2>
+            <p className="ds-copy mt-2">O arquivo privado será removido permanentemente.</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button ref={attachmentCancelRef} className="ds-button ds-button-secondary" disabled={attachmentDeletePending} onClick={() => setAttachmentToDelete(null)} type="button">Cancelar</button>
+              <button className="ds-button ds-button-danger-solid" disabled={attachmentDeletePending} onClick={() => void deleteAttachment()} type="button">
+                <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                {attachmentDeletePending ? "Excluindo..." : "Excluir anexo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </form>
+  );
 }
 
-export default function TaskWorkspace({ projectId }: { projectId: number }) {
+type TaskDrawerProps = {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+  children: ReactNode;
+};
+
+function TaskDrawer({ title, subtitle, onClose, children }: TaskDrawerProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (document.querySelector('[data-task-nested-dialog="true"]')) return;
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => returnFocus?.focus());
+    };
+  }, [onClose]);
+
+  return (
+    <>
+      <button className="ds-task-drawer-backdrop" aria-label="Fechar editor de tarefa" onClick={onClose} type="button" />
+      <aside ref={panelRef} className="ds-task-drawer" role="dialog" aria-modal="true" aria-labelledby="task-drawer-title">
+        <header className="ds-task-drawer-header">
+          <div className="min-w-0">
+            <p className="ds-task-drawer-eyebrow">Detalhes da tarefa</p>
+            <h3 className="ds-task-drawer-title" id="task-drawer-title">{title}</h3>
+            <p className="ds-task-drawer-subtitle">{subtitle}</p>
+          </div>
+          <button ref={closeButtonRef} className="ds-icon-button ds-task-drawer-close" aria-label="Fechar editor de tarefa" onClick={onClose} type="button">
+            <X className="ds-icon" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="ds-task-drawer-body">{children}</div>
+      </aside>
+    </>
+  );
+}
+
+type TaskWorkspaceProps = {
+  projectId: number;
+  /** Keeps the project list's task count in sync as tasks are added or removed. */
+  onTasksCountChange?: (count: number) => void;
+};
+
+export default function TaskWorkspace({ projectId, onTasksCountChange }: TaskWorkspaceProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [creating, setCreating] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [view, setView] = useState<"list" | "kanban">("list");
   const pendingTaskIdsRef = useRef<Set<number>>(new Set());
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<number>>(new Set());
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
     Promise.all([api.getTasks(projectId), api.getTags()]).then(([taskItems, tagItems]) => {
       if (active) { setTasks(taskItems); setTags(tagItems); }
-    }).catch(() => { if (active) setLoadError("Unable to load tasks and tags for this project."); }).finally(() => { if (active) setLoading(false); });
+    }).catch(() => { if (active) setLoadError("Não foi possível carregar as tarefas e etiquetas deste projeto."); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [projectId]);
+
+  useEffect(() => {
+    if (loading || loadError) return;
+    onTasksCountChange?.(tasks.length);
+  }, [loading, loadError, onTasksCountChange, tasks.length]);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); };
+  }, []);
+
+  const closeTaskDrawer = useCallback(() => {
+    setCreating(false);
+    setEditingTask(null);
+  }, []);
+
+  function startCreatingTask() {
+    setCreating(true);
+    setEditingTask(null);
+    setFeedback(null);
+  }
+
+  function startEditingTask(task: Task) {
+    setEditingTask(task);
+    setCreating(false);
+    setFeedback(null);
+  }
 
   function updateTask(saved: Task) {
     setTasks((current) => current.some((item) => item.id === saved.id) ? current.map((item) => item.id === saved.id ? saved : item) : [...current, saved]);
@@ -348,7 +574,7 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     updateTask(saved);
     setCreating(false);
     setEditingTask(null);
-    setFeedback("Task saved.");
+    setFeedback({ text: "Tarefa salva.", tone: "success" });
   }
 
   async function changeStatus(task: Task, status: TaskStatus) {
@@ -356,15 +582,15 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     const previous = task;
     pendingTaskIdsRef.current.add(task.id);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
-    setFeedback("");
+    setFeedback(null);
     setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status } : item));
     try {
       const saved = await api.updateTask(task.id, { status });
       updateTask(saved);
-      setFeedback("Task status updated.");
+      setFeedback({ text: "Status da tarefa atualizado.", tone: "success" });
     } catch {
       setTasks((current) => current.map((item) => item.id === task.id ? previous : item));
-      setFeedback("Unable to update task status. The task was restored.");
+      setFeedback({ text: "Não foi possível atualizar o status. A tarefa foi restaurada.", tone: "error" });
     } finally {
       pendingTaskIdsRef.current.delete(task.id);
       setPendingTaskIds(new Set(pendingTaskIdsRef.current));
@@ -373,10 +599,18 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
 
   async function deleteTask() {
     if (!taskToDelete || deletePending) return;
-    setDeletePending(true); setFeedback("");
-    try { await api.deleteTask(taskToDelete.id); setTasks((current) => current.filter((item) => item.id !== taskToDelete.id)); setFeedback("Task deleted."); }
-    catch { setFeedback("Unable to delete this task."); }
-    finally { setDeletePending(false); setTaskToDelete(null); }
+    setDeletePending(true);
+    setFeedback(null);
+    try {
+      await api.deleteTask(taskToDelete.id);
+      setTasks((current) => current.filter((item) => item.id !== taskToDelete.id));
+      setFeedback({ text: "Tarefa excluída.", tone: "success" });
+    } catch {
+      setFeedback({ text: "Não foi possível excluir esta tarefa.", tone: "error" });
+    } finally {
+      setDeletePending(false);
+      setTaskToDelete(null);
+    }
   }
 
   const formProps = {
@@ -387,22 +621,151 @@ export default function TaskWorkspace({ projectId }: { projectId: number }) {
     onTagCreated: (tag: Tag) => setTags((current) => [...current, tag].sort((a, b) => a.name.localeCompare(b.name))),
   };
 
-  return <div className="mt-10 min-w-0 border-t border-slate-200 pt-8">
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h3 className="text-xl font-bold text-slate-900">Tasks</h3><div className="flex flex-wrap items-center gap-3"><div className="inline-flex rounded-lg border border-slate-300 p-0.5" aria-label="Task view"><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "list" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "list"} onClick={() => setView("list")} type="button">List</button><button className={`rounded-md px-3 py-1.5 text-sm font-semibold ${view === "kanban" ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`} aria-pressed={view === "kanban"} onClick={() => setView("kanban")} type="button">Kanban</button></div>{!creating && !editingTask && <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setFeedback(""); }}>+ New task</button>}</div></div>
-    {creating && <TaskForm {...formProps} onCancel={() => setCreating(false)} />}
-    {editingTask && <TaskForm {...formProps} task={editingTask} onCancel={() => setEditingTask(null)} />}
-    {loading && <p className="text-sm text-slate-500">Loading tasks...</p>}
-    {loadError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p>}
-    {!loading && !loadError && tasks.length === 0 && !creating && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">No tasks yet. Create one to plan the next step.</p>}
-    {!loading && !loadError && tasks.length > 0 && view === "kanban" && <TaskKanban tasks={tasks} statuses={statuses} pendingTaskIds={pendingTaskIds} editingTaskId={editingTask?.id ?? null} onMove={(task, status) => void changeStatus(task, status)} onEdit={(task) => { setEditingTask(task); setCreating(false); setFeedback(""); }} onDelete={(task) => { setTaskToDelete(task); setFeedback(""); }} />}
-    {!loading && !loadError && tasks.length > 0 && view === "list" && <div className="mt-5 grid gap-3">{tasks.map((task) => <article className={`rounded-xl border p-4 ${task.status === "completed" ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"}`} key={task.id}>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h4 className={`font-semibold text-slate-900 ${task.status === "completed" ? "line-through decoration-slate-400" : ""}`}>{task.title}</h4>{task.short_description && <p className="mt-1 text-sm text-slate-600">{task.short_description}</p>}{task.due_at && <p className="mt-2 text-xs font-medium text-slate-500">Due · {formatDateTime(task.due_at)}</p>}</div><select className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 disabled:opacity-60" aria-label={`Status for ${task.title}`} disabled={pendingTaskIds.has(task.id) || editingTask?.id === task.id} value={task.status} onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}>{statuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
-      {task.description && <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{task.description}</p>}
-      {task.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Tags">{task.tags.map((tag) => <TagChip tag={tag} key={tag.id} />)}</div>}
-      {task.attachments.length > 0 && <ul className="mt-3 grid gap-2">{task.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} />)}</ul>}
-      <div className="mt-4 flex gap-3 text-sm font-semibold"><button className="text-indigo-600 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setEditingTask(task); setCreating(false); setFeedback(""); }}>Edit</button><button className="text-red-700 hover:underline disabled:opacity-60" disabled={pendingTaskIds.has(task.id)} onClick={() => { setTaskToDelete(task); setFeedback(""); }}>Delete</button></div>
-    </article>)}</div>}
-    {feedback && <p className={`mt-4 text-sm font-medium ${feedback.startsWith("Unable") ? "text-red-700" : "text-emerald-700"}`} role="status">{feedback}</p>}
-    {taskToDelete && <div className="fixed inset-0 z-20 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-task-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-task-title">Delete &quot;{taskToDelete.title}&quot;?</h2><p className="mt-2 text-slate-600">This action and its attachments cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" disabled={deletePending} onClick={() => setTaskToDelete(null)}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" disabled={deletePending} onClick={() => void deleteTask()}>{deletePending ? "Deleting..." : "Delete task"}</button></div></div></div>}
-  </div>;
+  const drawerOpen = creating || editingTask !== null;
+
+  return (
+    <div className="ds-task-workspace min-w-0">
+      <div className="ds-task-toolbar mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="ds-section-title">Tarefas</h3>
+          <p className="ds-meta mt-1">Planeje, acompanhe e mova o trabalho sem sair do projeto.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="ds-view-toggle" aria-label="Visualização de tarefas">
+            <button className="ds-view-option" aria-pressed={view === "list"} onClick={() => setView("list")} type="button">
+              <List className="ds-icon-sm" aria-hidden="true" />
+              Lista
+            </button>
+            <button className="ds-view-option" aria-pressed={view === "kanban"} onClick={() => setView("kanban")} type="button">
+              <Columns3 className="ds-icon-sm" aria-hidden="true" />
+              Kanban
+            </button>
+          </div>
+          {!drawerOpen && (
+            <button className="ds-button ds-button-primary" onClick={startCreatingTask}>
+              <Plus className="ds-icon" aria-hidden="true" />
+              Nova tarefa
+            </button>
+          )}
+        </div>
+      </div>
+
+      {drawerOpen && (
+        <TaskDrawer
+          title={editingTask ? "Editar tarefa" : "Nova tarefa"}
+          subtitle={editingTask ? editingTask.title : "Adicione trabalho sem sair do projeto atual."}
+          onClose={closeTaskDrawer}
+        >
+          {editingTask
+            ? <TaskForm {...formProps} task={editingTask} onCancel={closeTaskDrawer} />
+            : <TaskForm {...formProps} onCancel={closeTaskDrawer} />}
+        </TaskDrawer>
+      )}
+
+      {loading && <p className="ds-meta">Carregando tarefas...</p>}
+      {loadError && <p className="ds-alert" role="alert">{loadError}</p>}
+      {!loading && !loadError && tasks.length === 0 && !drawerOpen && (
+        <div className="ds-empty py-12">
+          <h4 className="ds-empty-title">Nenhuma tarefa ainda</h4>
+          <p className="ds-copy mt-1">Crie a primeira tarefa e comece a fazer o trabalho avançar.</p>
+          <button className="ds-button ds-button-primary mt-4" onClick={startCreatingTask}>
+            <Plus className="ds-icon" aria-hidden="true" />
+            Criar tarefa
+          </button>
+        </div>
+      )}
+
+      {!loading && !loadError && tasks.length > 0 && view === "kanban" && (
+        <TaskKanban
+          tasks={tasks}
+          statuses={taskStatuses}
+          pendingTaskIds={pendingTaskIds}
+          editingTaskId={editingTask?.id ?? null}
+          onMove={(task, status) => void changeStatus(task, status)}
+          onEdit={startEditingTask}
+          onDelete={(task) => { setTaskToDelete(task); setFeedback(null); }}
+        />
+      )}
+
+      {!loading && !loadError && tasks.length > 0 && view === "list" && (
+        <div className="mt-4 grid gap-3">
+          {tasks.map((task) => {
+            const overdue = now !== null && task.due_at !== null && new Date(task.due_at).getTime() < now && task.status !== "completed" && task.status !== "cancelled";
+            return (
+              <article className={`ds-task-card ${task.status === "completed" ? "is-completed" : ""}`} data-status={task.status} key={task.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="ds-card-title">{task.title}</h4>
+                    {task.short_description && <p className="ds-copy mt-1">{task.short_description}</p>}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      {task.due_at && (
+                        <span className="ds-inline-meta">
+                          <CalendarClock className="ds-icon-sm" aria-hidden="true" />
+                          {formatDateTime(task.due_at)}
+                        </span>
+                      )}
+                      {overdue && (
+                        <span className="ds-overdue">
+                          <AlertTriangle className="ds-icon-sm" aria-hidden="true" />
+                          Atrasada
+                        </span>
+                      )}
+                      {task.attachments.length > 0 && (
+                        <span className="ds-inline-meta">
+                          <Paperclip className="ds-icon-sm" aria-hidden="true" />
+                          {task.attachments.length} anexo{task.attachments.length === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    className="ds-input ds-status-select ds-status-control"
+                    aria-label={`Status de ${task.title}`}
+                    disabled={pendingTaskIds.has(task.id) || editingTask?.id === task.id}
+                    value={task.status}
+                    onChange={(event) => void changeStatus(task, event.target.value as TaskStatus)}
+                  >
+                    {taskStatuses.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+
+                {task.description && <p className="ds-copy ds-task-description mt-3 whitespace-pre-wrap">{task.description}</p>}
+                {task.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Etiquetas">{task.tags.map((tag) => <TagChip tag={tag} key={tag.id} />)}</div>}
+                {task.attachments.length > 0 && <ul className="mt-3 grid gap-2">{task.attachments.map((attachment) => <AttachmentItem attachment={attachment} key={attachment.id} />)}</ul>}
+
+                <div className="ds-task-actions mt-4">
+                  <button className="ds-action-button" disabled={pendingTaskIds.has(task.id)} onClick={() => startEditingTask(task)}>
+                    <Pencil className="ds-icon-sm" aria-hidden="true" />
+                    Editar
+                  </button>
+                  <button className="ds-action-button is-danger" disabled={pendingTaskIds.has(task.id)} onClick={() => { setTaskToDelete(task); setFeedback(null); }}>
+                    <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {feedback && <p className={`ds-feedback mt-4 ${feedback.tone === "error" ? "ds-feedback-error" : ""}`} role="status">{feedback.text}</p>}
+
+      {taskToDelete && (
+        <div className="ds-modal-overlay fixed inset-0 z-20 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-task-title">
+          <div className="ds-modal">
+            <h2 className="ds-modal-title" id="delete-task-title">Excluir &quot;{taskToDelete.title}&quot;?</h2>
+            <p className="ds-copy mt-2">Esta ação e os anexos da tarefa não podem ser desfeitos.</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button className="ds-button ds-button-secondary" disabled={deletePending} onClick={() => setTaskToDelete(null)}>Cancelar</button>
+              <button className="ds-button ds-button-danger-solid" disabled={deletePending} onClick={() => void deleteTask()}>
+                <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                {deletePending ? "Excluindo..." : "Excluir tarefa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

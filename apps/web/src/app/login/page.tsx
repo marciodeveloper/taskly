@@ -17,20 +17,27 @@ export default function LoginPage() {
   if (loading || user) return null;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-5 bg-slate-100 px-6 py-16">
+    <main className="ds-auth-page flex flex-1 flex-col items-center justify-center gap-5 px-4 py-16 sm:px-6">
       <AuthForm
-        title="Welcome back"
-        submitLabel="Sign in"
+        title="Bem-vindo de volta"
+        subtitle="Entre para continuar de onde você parou."
+        submitLabel="Entrar"
+        pendingLabel="Entrando..."
         fields="login"
         onSubmit={async (values) => {
           await login(values.email, values.password);
           router.push("/dashboard");
         }}
       />
-      <p className="text-sm text-slate-600">
-        New to Taskly?{" "}
-        <Link className="font-semibold text-indigo-600 hover:underline" href="/register">
-          Create an account
+      <p className="ds-copy">
+        <Link className="ds-accent-text font-semibold hover:underline" href="/forgot-password">
+          Esqueci minha senha
+        </Link>
+      </p>
+      <p className="ds-copy">
+        Ainda não tem conta?{" "}
+        <Link className="ds-accent-text font-semibold hover:underline" href="/register">
+          Criar conta
         </Link>
       </p>
     </main>

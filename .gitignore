@@ -1,0 +1,8 @@
+# Local AI/design tooling
+/.agents/
+/.claude/
+/.codex/
+/tools/design-audit/
+
+# Production secrets and local deploy bookkeeping
+/.env.production

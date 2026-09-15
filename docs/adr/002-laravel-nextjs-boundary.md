@@ -1,97 +1,97 @@
-# ADR-002 — Laravel owns the domain; Next.js owns the product UI
+# ADR-002 — O Laravel é dono do domínio; o Next.js é dono da UI do produto
 
 ## Status
 
-Accepted.
+Aceito.
 
-## Context
+## Contexto
 
-Taskly must demonstrate senior fullstack capability while remaining deliverable within a short technical-challenge window.
+O Taskly precisa demonstrar capacidade fullstack sênior e, ao mesmo tempo, ser entregável dentro da janela curta de um desafio técnico.
 
-Relevant constraints and context:
+Restrições e contexto relevantes:
 
-- PHP/Laravel is the candidate's primary backend stack and central to the target role.
-- UEX uses React/Next.js frequently according to recruiting interview context.
-- The challenge explicitly values fullstack implementation, APIs, code quality, architecture, and technical decisions.
-- Using Next.js as the database/backend authority would underrepresent Laravel expertise.
-- Using Laravel server-rendered UI only would not demonstrate the React/Next.js alignment discussed during the interview.
+- PHP/Laravel é o stack de backend principal do candidato e é central para a vaga alvo.
+- A UEX usa React/Next.js com frequência, conforme o contexto da entrevista de recrutamento.
+- O desafio valoriza explicitamente implementação fullstack, APIs, qualidade de código, arquitetura e decisões técnicas.
+- Usar o Next.js como autoridade de banco de dados/backend sub-representaria a experiência com Laravel.
+- Usar apenas UI renderizada pelo Laravel não demonstraria o alinhamento com React/Next.js discutido na entrevista.
 
-## Decision
+## Decisão
 
-Laravel is the authoritative application/domain backend.
+O Laravel é o backend de aplicação/domínio autoritativo.
 
-Next.js is the dedicated frontend application and consumes Laravel through a REST/JSON boundary.
+O Next.js é a aplicação frontend dedicada e consome o Laravel através de uma fronteira REST/JSON.
 
-### Laravel owns
+### O Laravel é dono de
 
-- authentication/session behavior;
-- authorization;
-- validation;
-- business rules;
-- persistence;
-- task/project ownership;
+- comportamento de autenticação/sessão;
+- autorização;
+- validação;
+- regras de negócio;
+- persistência;
+- propriedade de tasks/projects;
 - tags;
-- attachments;
-- API contracts/resources;
-- backend logging and server-side security.
+- anexos;
+- contratos/resources da API;
+- logging de backend e segurança no servidor.
 
-### Next.js owns
+### O Next.js é dono de
 
-- routes/layouts and application shell;
-- UI rendering;
-- project navigation;
-- task forms;
-- list/Kanban presentation;
-- drag-and-drop/client interactions;
-- optimistic UI where appropriate;
-- responsive/accessibility behavior;
-- frontend API client and presentation state.
+- rotas/layouts e o shell da aplicação;
+- renderização de UI;
+- navegação entre projetos;
+- formulários de task;
+- apresentação em list/Kanban;
+- drag-and-drop e interações no cliente;
+- optimistic UI onde fizer sentido;
+- comportamento responsivo e de acessibilidade;
+- cliente de API do frontend e estado de apresentação.
 
-### PostgreSQL boundary
+### Fronteira com o PostgreSQL
 
-Next.js must not access PostgreSQL directly.
+O Next.js não deve acessar o PostgreSQL diretamente.
 
-Every domain mutation and protected read is authorized and processed by Laravel.
+Toda mutação de domínio e toda leitura protegida é autorizada e processada pelo Laravel.
 
-## Consequences
+## Consequências
 
-### Positive
+### Positivas
 
-- PHP/Laravel remains central to the implementation narrative and engineering depth.
-- React/Next.js experience is demonstrated using a real frontend boundary rather than decorative components.
-- The REST API becomes a genuine application contract.
-- Backend authorization remains centralized and independently testable.
-- Frontend and backend concerns remain explainable during technical review.
+- PHP/Laravel permanece central na narrativa de implementação e na profundidade de engenharia.
+- A experiência com React/Next.js é demonstrada usando uma fronteira de frontend real, e não componentes decorativos.
+- A API REST se torna um contrato de aplicação genuíno.
+- A autorização de backend permanece centralizada e testável de forma independente.
+- As responsabilidades de frontend e backend continuam explicáveis durante a revisão técnica.
 
 ### Trade-offs
 
-- two runtimes must be configured and deployed;
-- authentication/session topology across frontend and backend requires deliberate configuration;
-- API contracts can drift unless types/tests/review keep them aligned;
-- Docker/CI must support both PHP and Node ecosystems.
+- dois runtimes precisam ser configurados e publicados;
+- a topologia de autenticação/sessão entre frontend e backend exige configuração deliberada;
+- contratos de API podem divergir se tipos, testes e revisão não os mantiverem alinhados;
+- Docker e CI precisam suportar os ecossistemas PHP e Node.
 
-## Alternatives considered
+## Alternativas consideradas
 
-### Next.js fullstack only
+### Next.js fullstack apenas
 
-Rejected. It would simplify deployment but remove Laravel from the core architecture despite its relevance to the role and candidate profile.
+Rejeitada. Simplificaria o deploy, mas removeria o Laravel do núcleo da arquitetura, apesar de sua relevância para a vaga e para o perfil do candidato.
 
-### Laravel with Blade/Livewire only
+### Laravel apenas com Blade/Livewire
 
-Rejected for this challenge. It is a valid product architecture, but would not demonstrate the React/Next.js environment discussed in the recruiting interview.
+Rejeitada para este desafio. É uma arquitetura de produto válida, mas não demonstraria o ambiente React/Next.js discutido na entrevista de recrutamento.
 
-### Laravel API + separate React SPA without Next.js
+### API Laravel + SPA React separada sem Next.js
 
-Viable, but Next.js was selected because it better matches the technology context provided by UEX and provides a structured modern React application environment.
+Viável, mas o Next.js foi escolhido por se alinhar melhor ao contexto tecnológico informado pela UEX e por oferecer um ambiente estruturado e moderno de aplicação React.
 
 ## Guardrails
 
-- Do not place authorization only in Next.js.
-- Do not duplicate domain rules as competing sources of truth.
-- Do not introduce backend logic into Next.js solely to avoid an API call.
-- Do not create Laravel abstractions that exist only to appear architecturally sophisticated.
-- Prefer explicit, testable contracts over hidden coupling.
+- Não colocar autorização apenas no Next.js.
+- Não duplicar regras de domínio como fontes de verdade concorrentes.
+- Não introduzir lógica de backend no Next.js apenas para evitar uma chamada de API.
+- Não criar abstrações no Laravel que existam apenas para parecer arquiteturalmente sofisticadas.
+- Preferir contratos explícitos e testáveis a acoplamento implícito.
 
-## Review trigger
+## Gatilho de revisão
 
-Revisit if a concrete requirement makes the HTTP boundary materially harmful or if deployment constraints prove stateful frontend/backend integration impractical. Any revision must preserve server-side domain/security ownership.
+Revisitar se algum requisito concreto tornar a fronteira HTTP materialmente prejudicial, ou se restrições de deploy provarem que a integração stateful entre frontend e backend é impraticável. Qualquer revisão deve preservar a propriedade de domínio e segurança no servidor.

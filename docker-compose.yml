@@ -20,8 +20,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
+      APP_NAME: Taskly
       APP_URL: http://127.0.0.1:18000
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: en
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -29,11 +34,27 @@ services:
       DB_USERNAME: taskly
       DB_PASSWORD: taskly
       SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:3000,localhost:3000
+      FRONTEND_URL: http://127.0.0.1:3000
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: no-reply@taskly.local
+      MAIL_FROM_NAME: Taskly
     volumes:
       - ./apps/api:/var/www/html
       - api_vendor:/var/www/html/vendor
     ports:
       - "127.0.0.1:18000:8000"
+
+  # Development-only mail catcher. Never part of a production deployment.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    environment:
+      MP_MAX_MESSAGES: 200
+    ports:
+      # Web UI. SMTP is also published so a natively-run Laravel can reuse it.
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   web:
     build:

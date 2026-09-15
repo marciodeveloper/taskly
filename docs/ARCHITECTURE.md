@@ -1,18 +1,18 @@
-# Taskly — Architecture
+# Taskly — Arquitetura
 
-## 1. Architectural intent
+## 1. Intenção arquitetural
 
-Taskly is designed as a small, production-minded fullstack product rather than a single-framework CRUD demo.
+O Taskly foi desenhado como um produto fullstack pequeno e com mentalidade de produção, e não como uma demo de CRUD em um framework só.
 
-The architecture deliberately keeps PHP/Laravel as the authoritative backend and domain layer while using Next.js/React/TypeScript for the user experience.
+A arquitetura mantém deliberadamente PHP/Laravel como backend e camada de domínio autoritativos, enquanto usa Next.js/React/TypeScript para a experiência do usuário.
 
-This split reflects three goals:
+Essa divisão reflete três objetivos:
 
-1. keep business rules, authorization, validation, persistence, and API behavior centralized in Laravel;
-2. use Next.js/React for a polished interactive frontend aligned with a modern product stack;
-3. keep the boundaries explicit enough to be testable and explainable within a three-day technical challenge.
+1. manter regras de negócio, autorização, validação, persistência e comportamento da API centralizados no Laravel;
+2. usar Next.js/React para um frontend interativo e polido, alinhado a um stack de produto moderno;
+3. manter as fronteiras explícitas o bastante para serem testáveis e explicáveis dentro de um desafio técnico de três dias.
 
-## 2. High-level view
+## 2. Visão geral
 
 ```text
 Browser
@@ -35,17 +35,17 @@ Laravel REST API
 PostgreSQL
 ```
 
-The frontend never accesses PostgreSQL directly.
+O frontend nunca acessa o PostgreSQL diretamente.
 
-## 3. Repository layout
+## 3. Layout do repositório
 
-Target monorepo structure:
+Estrutura alvo do monorepo:
 
 ```text
 taskly/
 ├── apps/
-│   ├── api/              # Laravel application
-│   └── web/              # Next.js application
+│   ├── api/              # Aplicação Laravel
+│   └── web/              # Aplicação Next.js
 ├── docs/
 │   ├── SPEC.md
 │   ├── ARCHITECTURE.md
@@ -58,81 +58,89 @@ taskly/
 └── README.md
 ```
 
-Framework directories are intentionally not created until the specification and initial architecture decisions exist in Git history.
+Os diretórios de framework não são criados intencionalmente até que a especificação e as decisões iniciais de arquitetura existam no histórico do Git.
 
-## 4. Backend responsibilities — Laravel
+## 4. Responsabilidades do backend — Laravel
 
-Laravel is the source of truth for application behavior.
+O Laravel é a fonte de verdade do comportamento da aplicação.
 
-It owns:
+Ele é dono de:
 
-- registration, login, logout, and authenticated session behavior;
-- user identity;
-- project and task ownership;
-- all authorization decisions;
-- request validation;
-- task status rules;
-- persistence;
-- tags and task/tag relationships;
-- attachment upload/download authorization;
-- activity/event logging where implemented;
-- REST API resource contracts;
-- backend automated tests.
+- cadastro, login, logout e comportamento de sessão autenticada;
+- identidade do usuário;
+- propriedade de projetos e tarefas;
+- todas as decisões de autorização;
+- validação de requisições;
+- regras de status de tarefa;
+- persistência;
+- tags e relacionamentos task/tag;
+- autorização de upload/download de anexos;
+- logging de atividade/eventos onde implementado;
+- contratos de resource da API REST;
+- testes automatizados de backend.
 
-The backend must remain secure even if the frontend validation is bypassed entirely.
+O backend deve permanecer seguro mesmo que a validação do frontend seja completamente contornada.
 
-## 5. Frontend responsibilities — Next.js
+## 5. Responsabilidades do frontend — Next.js
 
-Next.js owns the product experience.
+O Next.js é dono da experiência de produto.
 
-It is responsible for:
+Ele é responsável por:
 
-- routes and layouts;
-- authenticated application shell;
-- project navigation;
-- task list view;
-- task Kanban view;
-- forms and field-level feedback;
-- loading/error/empty states;
-- responsive behavior;
-- drag-and-drop interactions;
-- optimistic UI where rollback is safe;
-- frontend type definitions and API-client concerns;
-- frontend and end-to-end tests where applicable.
+- rotas e layouts;
+- shell autenticado da aplicação;
+- navegação entre projetos;
+- visualização de tarefas em lista;
+- visualização de tarefas em Kanban;
+- formulários e feedback por campo;
+- estados de carregamento/erro/vazio;
+- comportamento responsivo;
+- interações de drag-and-drop;
+- optimistic UI onde o rollback é seguro;
+- definições de tipos do frontend e o cliente de API;
+- testes de frontend e end-to-end quando aplicável.
 
-The frontend must not duplicate backend business rules as an authority. Client-side validation exists for usability; Laravel validation remains authoritative.
+O frontend não deve duplicar regras de negócio do backend como autoridade. A validação no cliente existe por usabilidade; a validação do Laravel permanece autoritativa.
 
-## 6. API boundary
+## 6. Fronteira da API
 
-Communication between `apps/web` and `apps/api` uses HTTP/JSON.
+A comunicação entre `apps/web` e `apps/api` usa HTTP/JSON.
 
-The API should favor conventional REST semantics:
+A API deve favorecer semântica REST convencional:
 
-- collection endpoints for projects/tasks/tags;
-- resource endpoints for reads/updates/deletes;
-- nested project/task endpoints where the parent relationship improves authorization clarity;
-- explicit status/reorder endpoints only when they result in a clearer contract than generic resource updates.
+- endpoints de coleção para projects/tasks/tags;
+- endpoints de resource para leituras/atualizações/exclusões;
+- endpoints aninhados de project/task onde a relação com o pai melhora a clareza da autorização;
+- endpoints explícitos de status/reorder apenas quando resultarem em um contrato mais claro do que atualizações genéricas de resource.
 
-API payloads should be transformed through Laravel Resources or equivalent stable serializers rather than exposing arbitrary model serialization.
+Os payloads da API devem ser transformados por Laravel Resources ou serializadores estáveis equivalentes, em vez de expor serialização arbitrária de model.
 
-## 7. Authentication
+## 7. Autenticação
 
-The preferred strategy is Laravel Sanctum with stateful, secure HTTP-only cookie/session authentication for the first-party Next.js frontend.
+A estratégia preferencial é Laravel Sanctum com autenticação stateful por sessão e cookie seguro HTTP-only para o frontend Next.js first-party.
 
-Reasons:
+Motivos:
 
-- first-party browser client;
-- native Laravel integration;
-- CSRF protection;
-- reduced token exposure in browser JavaScript;
-- straightforward revocation/session behavior;
-- no product requirement justifies custom JWT complexity.
+- cliente de navegador first-party;
+- integração nativa com o Laravel;
+- proteção CSRF;
+- menor exposição de token no JavaScript do navegador;
+- comportamento direto de revogação/sessão;
+- nenhum requisito de produto justifica a complexidade de um JWT próprio.
 
-The final deployment topology (same parent domain versus local development origins) must be reflected in Sanctum stateful-domain, cookie, CORS, and CSRF configuration.
+A topologia final de deploy usa um único origin público, `https://taskly.webarthem.com.br`, com Nginx roteando frontend e backend. Essa escolha reduz a superfície de CORS e mantém Sanctum, cookies e CSRF no mesmo origin.
 
-## 8. Authorization model
+### Recuperação de senha
 
-Ownership flows through the project relationship:
+A redefinição de senha usa o Password Broker nativo do Laravel: o backend é dono da geração, expiração e invalidação do token, sem esquema próprio.
+
+A consequência arquitetural é que o e-mail é enviado pelo Laravel, mas o formulário vive no Next.js. O link é montado por `ResetPassword::createUrlUsing` a partir de `FRONTEND_URL`, de modo que a fronteira entre as duas aplicações continue explícita e configurável por ambiente, sem URL fixa espalhada pelo código.
+
+A solicitação responde sempre a mesma mensagem, independentemente de o endereço estar cadastrado, e a resposta de erro do reset não distingue token inválido de usuário inexistente. Os dois casos existem para evitar enumeração de contas.
+
+## 8. Modelo de autorização
+
+A propriedade flui pela relação com o projeto:
 
 ```text
 User
@@ -144,24 +152,24 @@ User
                   +--> Attachment
 ```
 
-Tags are also user-scoped.
+As tags também são delimitadas por usuário.
 
-Authorization should combine:
+A autorização deve combinar:
 
-- Laravel Policies for explicit resource abilities;
-- ownership-scoped queries for nested resources;
-- tests covering horizontal privilege escalation/IDOR scenarios.
+- Laravel Policies para habilidades explícitas sobre cada resource;
+- queries delimitadas por propriedade para recursos aninhados;
+- testes cobrindo cenários de escalonamento horizontal de privilégio/IDOR.
 
-A URL containing valid resource IDs must never be sufficient to authorize access.
+Uma URL contendo IDs de resource válidos nunca pode ser suficiente para autorizar acesso.
 
-## 9. Application/service layer
+## 9. Camada de aplicação/serviço
 
-The project should avoid both extremes:
+O projeto deve evitar os dois extremos:
 
-- controllers containing all business logic;
-- unnecessary enterprise abstractions for simple CRUD.
+- controllers contendo toda a lógica de negócio;
+- abstrações corporativas desnecessárias para um CRUD simples.
 
-Baseline pattern:
+Padrão de referência:
 
 ```text
 HTTP request
@@ -173,185 +181,226 @@ Form Request
 Controller
    |
    v
-Action / Service (when behavior is non-trivial)
+Action / Service (quando o comportamento não é trivial)
    |
-   +--> Policy / authorization
-   +--> transaction if needed
-   +--> Eloquent models
-   +--> side effects / activity log
+   +--> Policy / autorização
+   +--> transação se necessário
+   +--> models Eloquent
+   +--> efeitos colaterais / log de atividade
    |
    v
 API Resource
 ```
 
-Simple operations may remain concise in controllers when extracting them would not improve clarity.
+Operações simples podem permanecer concisas nos controllers quando extraí-las não melhoraria a clareza.
 
-## 10. Data layer
+## 10. Camada de dados
 
-PostgreSQL is the selected relational database.
+O PostgreSQL é o banco relacional escolhido.
 
-Eloquent remains the primary persistence abstraction.
+O Eloquent permanece como abstração primária de persistência.
 
-Data-access rules:
+Regras de acesso a dados:
 
-- relationships must be explicit;
-- foreign keys and indexes support ownership/status/deadline queries;
-- avoid N+1 queries;
-- use database transactions for multi-step state changes when consistency requires them;
-- prefer database constraints where they protect invariants reliably.
+- relacionamentos devem ser explícitos;
+- chaves estrangeiras e índices suportam queries de propriedade/status/prazo;
+- evitar queries N+1;
+- usar transações de banco para mudanças de estado em múltiplas etapas quando a consistência exigir;
+- preferir constraints de banco onde elas protegem invariantes de forma confiável.
 
-No repository-pattern abstraction will be added unless an actual implementation need justifies it.
+Nenhuma abstração de repository pattern será adicionada a menos que uma necessidade concreta de implementação a justifique.
 
-## 11. Task status model
+## 11. Modelo de status de tarefa
 
-Canonical backend values:
+Valores canônicos do backend:
 
 - `not_started`
 - `in_progress`
 - `completed`
 - `cancelled`
 
-PHP backed enums are preferred if supported naturally by the selected Laravel/PHP version.
+Enums tipados do PHP são preferidos se suportados naturalmente pela versão de Laravel/PHP escolhida.
 
-When status changes to completed, the backend may set `completed_at`. When a completed task leaves that state, `completed_at` should be cleared.
+Quando o status muda para completed, o backend pode definir `completed_at`. Quando uma tarefa concluída sai desse estado, `completed_at` deve ser limpo.
 
-## 12. Kanban behavior
+## 12. Comportamento do Kanban
 
-The Kanban UI maps one column to each canonical task status.
+A UI de Kanban mapeia uma coluna para cada status canônico de tarefa.
 
-Expected interaction:
+Interação esperada:
 
 ```text
-drag card
+arrastar o cartão
    |
    v
-optimistic UI update
+atualização otimista da UI
    |
    v
-Laravel API request
+requisição à API Laravel
    |
-   +--> validation
-   +--> authorization
-   +--> persistence
+   +--> validação
+   +--> autorização
+   +--> persistência
    |
    v
-success -> keep state
-failure -> rollback + user feedback
+sucesso -> manter o estado
+falha -> rollback + feedback ao usuário
 ```
 
-Optimistic behavior is an enhancement, not permission to sacrifice correctness.
+Comportamento otimista é um aprimoramento, não permissão para sacrificar correção.
 
-## 13. File uploads
+## 13. Upload de arquivos
 
-Laravel owns upload validation and storage.
+O Laravel é dono da validação e do armazenamento de uploads.
 
-Security rules:
+Regras de segurança:
 
-- validate MIME type and size server-side;
-- never trust client paths;
-- generate safe stored paths/names;
-- authorize attachment reads/deletes through task ownership;
-- avoid making private task attachments publicly enumerable by default.
+- validar MIME type e tamanho no servidor;
+- nunca confiar em caminhos vindos do cliente;
+- gerar caminhos/nomes de armazenamento seguros;
+- autorizar leitura/exclusão de anexos pela propriedade da tarefa;
+- evitar que anexos privados de tarefa sejam publicamente enumeráveis por padrão.
 
-The concrete storage backend may start with Laravel-compatible local storage and evolve to S3-compatible object storage for deployment if needed.
+Em produção, os anexos privados ficam em volume Docker persistente montado em `storage/app/private/task-attachments`, preservando os arquivos entre recriações do container da API.
 
-## 14. Testing architecture
+## 14. Arquitetura de testes
 
 ### Backend
 
-Pest or PHPUnit will cover:
+Pest ou PHPUnit cobrirão:
 
-- feature/API behavior;
-- authorization boundaries;
-- validation;
-- resource ownership;
-- task status/domain behavior;
-- attachment security.
+- comportamento de feature/API;
+- fronteiras de autorização;
+- validação;
+- propriedade de recursos;
+- comportamento de status/domínio de tarefa;
+- segurança de anexos.
 
 ### Frontend
 
-Vitest/React Testing Library may cover focused component and state behavior where it provides useful confidence.
+Vitest/React Testing Library podem cobrir comportamento pontual de componentes e estado, onde isso trouxer confiança útil.
 
 ### End-to-end
 
-Playwright is preferred for the primary product journey across the real frontend/backend boundary.
+O Playwright é preferido para a jornada principal de produto atravessando a fronteira real entre frontend e backend.
 
-The strategy prioritizes risk and behavior rather than chasing an arbitrary coverage percentage.
+A estratégia prioriza risco e comportamento, em vez de perseguir um percentual arbitrário de cobertura.
 
-## 15. Docker and local development
+## 15. Docker e desenvolvimento local
 
-The intended local/development topology is Docker Compose with separate services for at least:
+A topologia para local/desenvolvimento usa Docker Compose com serviços separados para:
 
 - web;
 - api;
 - PostgreSQL;
-- Redis only if justified by session/cache/queue usage.
+- Mailpit, para inspecionar e-mails em desenvolvimento.
 
-A contributor should eventually be able to bootstrap the complete application from the repository README without depending on host-specific PHP/Node/PostgreSQL installations.
+O Mailpit é infraestrutura de desenvolvimento e não faz parte do deploy de produção.
 
-## 16. CI/CD direction
+Uma pessoa contribuindo consegue subir a aplicação completa a partir do README do repositório sem depender de instalações específicas de PHP/Node/PostgreSQL no host.
 
-GitHub Actions should eventually validate at minimum:
+## 16. CI/CD e topologia de produção
 
-- backend dependency installation;
-- backend lint/static checks where selected;
-- backend automated tests;
-- frontend dependency installation;
-- frontend lint/typecheck;
-- frontend tests;
-- production builds where practical.
+O workflow versionado em `.github/workflows/ci-cd.yml` separa as validações em três frentes:
 
-Deployment automation is a stretch goal after the required application scope is stable.
+- backend: instalação de dependências, testes Laravel e Pint;
+- frontend: `npm ci`, ESLint e build Next.js;
+- produção: validação do Compose e build das imagens de API e web.
 
-## 17. AI-assisted engineering boundary
+O job de deploy depende dessas validações e foi desenhado para publicar exatamente o `GITHUB_SHA`, em vez de fazer deploy do estado genérico de uma branch. Pushes em `feat/visual-polish` executam CI sem deploy automático; pushes em `main` podem seguir para produção depois dos checks, e `workflow_dispatch` permite disparo explícito quando o workflow estiver disponível na default branch.
 
-AI tools are part of the engineering workflow but never own architectural or security decisions.
+A primeira publicação foi feita manualmente por SHA exato depois da execução local da mesma bateria de validações, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Esse bootstrap manual não é tratado como CI remoto aprovado. O primeiro SHA de aplicação publicado e validado foi `28b2984c47906066305716f802eb1ab03c4fca1b`.
 
-AI may assist with:
+A topologia efetiva de produção é:
 
-- implementation;
-- test generation;
-- refactoring;
+```text
+Internet
+   |
+   | HTTPS
+   v
+Nginx
+   |
+   +--> /, frontend
+   |       |
+   |       v
+   |   Next.js
+   |   127.0.0.1:13080
+   |
+   +--> /api, /sanctum, /up
+           |
+           v
+       Laravel
+       127.0.0.1:18081
+           |
+           v
+       PostgreSQL
+       rede Docker interna
+```
+
+Características operacionais:
+
+- origem pública única: `https://taskly.webarthem.com.br`;
+- Nginx é a única entrada HTTP/HTTPS da aplicação;
+- Next.js e Laravel ficam vinculados somente ao loopback do host;
+- PostgreSQL não publica porta no host;
+- banco e anexos usam volumes Docker persistentes dedicados;
+- `APP_ENV=production` e `APP_DEBUG=false` no ambiente publicado;
+- TLS emitido por Let's Encrypt/Certbot, com renovação automática configurada;
+- HTTP é redirecionado para HTTPS;
+- Mailpit não existe em produção;
+- o ambiente público atual usa `MAIL_MAILER=log`, então recuperação externa por e-mail depende de SMTP real.
+
+O checkout de produção vive separado do diretório de desenvolvimento e o script `scripts/deploy-production.sh` recebe explicitamente um SHA de 40 caracteres, valida o ambiente, faz checkout detached desse commit, aplica migrations com `--force`, sobe os containers e executa health checks internos.
+
+## 17. Fronteira da engenharia assistida por IA
+
+Ferramentas de IA fazem parte do fluxo de engenharia, mas nunca são donas de decisões de arquitetura ou de segurança.
+
+A IA pode auxiliar em:
+
+- implementação;
+- geração de testes;
+- refatoração;
 - code review;
-- security review;
-- documentation.
+- revisão de segurança;
+- documentação.
 
-Human review remains mandatory, and relevant interactions/corrections are recorded in `docs/AI_USAGE.md`.
+A revisão humana permanece obrigatória, e as interações/correções relevantes ficam registradas em `docs/AI_USAGE.md`.
 
-## 18. Explicit trade-offs
+## 18. Trade-offs explícitos
 
-### Separate Laravel and Next.js runtimes
+### Runtimes separados de Laravel e Next.js
 
-Cost:
+Custo:
 
-- more deployment/configuration surface;
-- cross-origin/session configuration must be correct;
-- two build systems.
+- mais superfície de deploy/configuração;
+- a configuração de cross-origin/sessão precisa estar correta;
+- dois sistemas de build.
 
-Benefit:
+Benefício:
 
-- clear frontend/backend responsibilities;
-- genuine REST API implementation;
-- demonstrates fullstack integration across the technologies selected for the challenge;
-- backend remains independently testable and reusable.
+- responsabilidades claras de frontend e backend;
+- implementação genuína de API REST;
+- demonstra integração fullstack entre as tecnologias escolhidas para o desafio;
+- o backend permanece testável e reutilizável de forma independente.
 
-### No Python service in the MVP
+### Sem serviço em Python no MVP
 
-Python is deliberately not introduced only to demonstrate another language. The Taskly MVP has no domain problem that justifies a Python service.
+Python não é introduzido apenas para demonstrar outra linguagem. O MVP do Taskly não tem problema de domínio que justifique um serviço em Python.
 
-If future requirements introduce document processing, AI/NLP workloads, analytical pipelines, or specialized background processing, a Python worker/service could be evaluated then.
+Se requisitos futuros trouxerem processamento de documentos, cargas de IA/NLP, pipelines analíticos ou processamento em background especializado, um worker/serviço em Python poderá ser avaliado então.
 
-### No premature microservices
+### Sem microsserviços prematuros
 
-The product is a small personal task manager. Laravel remains a modular monolith backend. Splitting domain capabilities into services during this challenge would add operational complexity without corresponding product value.
+O produto é um gerenciador pessoal de tarefas pequeno. O Laravel permanece como um backend monolítico modular. Dividir capacidades de domínio em serviços durante este desafio adicionaria complexidade operacional sem valor de produto correspondente.
 
-## 19. Evolution principles
+## 19. Princípios de evolução
 
-Future changes should preserve these principles:
+Mudanças futuras devem preservar estes princípios:
 
-- domain/security rules remain server-side;
-- frontend/backed contracts are explicit;
-- new technology requires a product or engineering justification;
-- avoid abstractions without concrete pressure;
-- prefer observable, testable behavior;
-- architecture should remain explainable in a technical review.
+- regras de domínio/segurança permanecem no servidor;
+- contratos entre frontend e backend são explícitos;
+- nova tecnologia exige justificativa de produto ou de engenharia;
+- evitar abstrações sem pressão concreta;
+- preferir comportamento observável e testável;
+- a arquitetura deve continuar explicável em uma revisão técnica.

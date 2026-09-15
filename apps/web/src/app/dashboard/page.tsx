@@ -1,10 +1,38 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  FolderPlus,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import TaskWorkspace from "@/components/TaskWorkspace";
 import { ApiError, api, type Project } from "@/lib/api/client";
+import type { Feedback } from "@/lib/feedback";
 import { useAuth } from "@/lib/auth/AuthContext";
+
+/**
+ * Deleting a project takes its tasks and attachments with it, so the
+ * confirmation has to say so whenever there is anything to lose.
+ */
+function deleteProjectWarning(tasksCount: number): string {
+  if (tasksCount < 1) return "Esta ação não pode ser desfeita.";
+
+  const tarefas = tasksCount === 1 ? "1 tarefa" : `${tasksCount} tarefas`;
+
+  return `Este projeto possui ${tarefas}. Ao excluí-lo, ${
+    tasksCount === 1 ? "ela e seus anexos também serão removidos" : "todas as tarefas e seus anexos também serão removidos"
+  } permanentemente. Esta ação não pode ser desfeita.`;
+}
 
 type ProjectFormProps = {
   project?: Project;
@@ -36,7 +64,7 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
         setMessage(error.message);
         setErrors(error.validationErrors);
       } else {
-        setMessage("Unable to save this project.");
+        setMessage("Não foi possível salvar este projeto.");
       }
     } finally {
       setSaving(false);
@@ -44,60 +72,39 @@ function ProjectForm({ project, onCancel, onSaved }: ProjectFormProps) {
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
+    <form className="ds-form grid gap-4" onSubmit={submit}>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-name">
-          Name <span className="text-red-600">*</span>
+        <label className="ds-label mb-1" htmlFor="project-name">
+          Nome <span className="ds-danger-text">*</span>
         </label>
         <input
           id="project-name"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
+          className="ds-input"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
           aria-describedby="project-name-error"
         />
-        {errors.name?.map((error) => <p className="mt-1 text-xs text-red-600" id="project-name-error" key={error}>{error}</p>)}
+        {errors.name?.map((error) => <p className="ds-danger-text mt-1 text-xs" id="project-name-error" key={error}>{error}</p>)}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-description">
-          Description
-        </label>
-        <textarea
-          id="project-description"
-          className="min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
+        <label className="ds-label mb-1" htmlFor="project-description">Descrição</label>
+        <textarea id="project-description" className="ds-input" value={description} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-semibold text-slate-700" htmlFor="project-color">
-          Color
-        </label>
+        <label className="ds-label mb-1" htmlFor="project-color">Cor</label>
         <div className="flex gap-2">
-          <input
-            id="project-color"
-            className="h-10 w-14 rounded border border-slate-300"
-            type="color"
-            value={color}
-            onChange={(event) => setColor(event.target.value.toUpperCase())}
-          />
-          <input
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 uppercase focus:ring-2 focus:ring-indigo-500"
-            value={color}
-            onChange={(event) => setColor(event.target.value)}
-            pattern="^#[0-9A-Fa-f]{6}$"
-            aria-label="Hex color"
-          />
+          <input id="project-color" className="ds-color-input" type="color" value={color} onChange={(event) => setColor(event.target.value.toUpperCase())} />
+          <input className="ds-input uppercase" value={color} onChange={(event) => setColor(event.target.value)} pattern="^#[0-9A-Fa-f]{6}$" aria-label="Cor em hexadecimal" />
         </div>
-        {errors.color?.map((error) => <p className="mt-1 text-xs text-red-600" key={error}>{error}</p>)}
+        {errors.color?.map((error) => <p className="ds-danger-text mt-1 text-xs" key={error}>{error}</p>)}
       </div>
-      {message && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{message}</p>}
+      {message && <p className="ds-alert" role="alert">{message}</p>}
       <div className="flex gap-2">
-        <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60" disabled={saving} type="submit">
-          {saving ? "Saving..." : project ? "Save changes" : "Create project"}
+        <button className="ds-button ds-button-primary" disabled={saving} type="submit">
+          {saving ? "Salvando..." : project ? "Salvar alterações" : "Criar projeto"}
         </button>
-        {onCancel && <button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50" onClick={onCancel} type="button">Cancel</button>}
+        {onCancel && <button className="ds-button ds-button-secondary" onClick={onCancel} type="button">Cancelar</button>}
       </div>
     </form>
   );
@@ -114,7 +121,10 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const mobileSidebarCloseRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -129,7 +139,7 @@ export default function DashboardPage() {
         const validQueryId = items.some((item) => item.id === queryId);
         setSelectedId(validQueryId ? queryId : items[0]?.id ?? null);
       })
-      .catch(() => setError("Unable to load your projects."))
+      .catch(() => setError("Não foi possível carregar seus projetos."))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -141,7 +151,54 @@ export default function DashboardPage() {
     window.history.replaceState(null, "", `/dashboard?project=${selectedId}`);
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => mobileSidebarCloseRef.current?.focus());
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileSidebarOpen(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setMobileSidebarOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [mobileSidebarOpen]);
+
   const selected = useMemo(() => projects.find((project) => project.id === selectedId), [projects, selectedId]);
+
+  const syncTasksCount = useCallback((tasksCount: number) => {
+    setProjects((current) => current.map((project) => (
+      project.id === selectedId && project.tasks_count !== tasksCount
+        ? { ...project, tasks_count: tasksCount }
+        : project
+    )));
+  }, [selectedId]);
+  const initials = useMemo(() => user?.name?.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U", [user?.name]);
+
+  function startCreatingProject() {
+    setCreating(true);
+    setEditing(false);
+    setMobileSidebarOpen(false);
+  }
+
+  function selectProject(projectId: number) {
+    setSelectedId(projectId);
+    setCreating(false);
+    setEditing(false);
+    setMobileSidebarOpen(false);
+  }
 
   async function saveProject(project: Project) {
     setProjects((current) => {
@@ -151,7 +208,7 @@ export default function DashboardPage() {
     setSelectedId(project.id);
     setCreating(false);
     setEditing(false);
-    setFeedback("Project saved.");
+    setFeedback({ text: "Projeto salvo.", tone: "success" });
   }
 
   async function removeProject() {
@@ -162,90 +219,215 @@ export default function DashboardPage() {
       const remaining = projects.filter((project) => project.id !== selected.id);
       setProjects(remaining);
       setSelectedId(remaining[0]?.id ?? null);
-      setFeedback("Project deleted.");
+      setFeedback({ text: "Projeto excluído.", tone: "success" });
     } catch {
-      setFeedback("Unable to delete this project.");
+      setFeedback({ text: "Não foi possível excluir este projeto.", tone: "error" });
     } finally {
       setDeletePending(false);
       setDeleteDialogOpen(false);
     }
   }
 
-  async function moveProject(direction: -1 | 1) {
-    if (!selected) return;
-    const index = projects.findIndex((project) => project.id === selected.id);
+  async function moveProject(projectId: number, direction: -1 | 1) {
+    const index = projects.findIndex((project) => project.id === projectId);
     const target = index + direction;
-    if (target < 0 || target >= projects.length) return;
+    if (index < 0 || target < 0 || target >= projects.length) return;
+    const previous = projects;
     const next = [...projects];
     [next[index], next[target]] = [next[target], next[index]];
     setProjects(next);
     try {
       await api.reorderProjects(next.map((project) => project.id));
-      setFeedback("Project order updated.");
+      setFeedback({ text: "Ordem dos projetos atualizada.", tone: "success" });
     } catch {
-      setProjects(projects);
-      setFeedback("Unable to update project order.");
+      setProjects(previous);
+      setFeedback({ text: "Não foi possível atualizar a ordem dos projetos.", tone: "error" });
     }
   }
 
   if (authLoading || !user) return null;
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <p className="text-xl font-bold tracking-tight text-slate-900">Taskly</p>
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <span>{user.name}</span>
-            <button className="font-semibold text-indigo-600 hover:underline" onClick={async () => { await logout(); router.replace("/login"); }}>
-              Logout
+    <main className="ds-shell">
+      <header className="ds-topbar">
+        <div className="ds-topbar-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              className="ds-icon-button ds-mobile-sidebar-trigger lg:hidden"
+              aria-controls="project-navigation"
+              aria-expanded={mobileSidebarOpen}
+              aria-label="Abrir navegação de projetos"
+              onClick={() => setMobileSidebarOpen(true)}
+              type="button"
+            >
+              <Menu className="ds-icon" aria-hidden="true" />
+            </button>
+            <p className="ds-brand">Taskly<span className="ds-brand-dot">.</span></p>
+            {selected && <span className="ds-topbar-context hidden md:inline" aria-hidden="true">/ {selected.name}</span>}
+          </div>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="ds-user-chip">
+              <span className="ds-avatar" aria-hidden="true">{initials}</span>
+              <span className="ds-user hidden sm:inline">{user.name}</span>
+            </div>
+            <button className="ds-button ds-button-ghost ds-button-compact" onClick={async () => { await logout(); router.replace("/login"); }}>
+              <LogOut className="ds-icon-sm" aria-hidden="true" />
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-2xl bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
-            <h1 className="font-bold text-slate-900">Projects</h1>
-            <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onClick={() => { setCreating(true); setEditing(false); }}>
-              + New
-            </button>
+
+      {mobileSidebarOpen && (
+        <button
+          className="ds-mobile-sidebar-backdrop lg:hidden"
+          aria-label="Fechar navegação de projetos"
+          onClick={() => setMobileSidebarOpen(false)}
+          type="button"
+        />
+      )}
+
+      <div className={`ds-dashboard-grid mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8 ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`}>
+        <aside
+          id="project-navigation"
+          className={`ds-sidebar ${sidebarCollapsed ? "is-collapsed" : ""} ${mobileSidebarOpen ? "is-mobile-open" : ""}`}
+          aria-label="Navegação de projetos"
+        >
+          <div className="ds-sidebar-header mb-4 flex items-center justify-between gap-2">
+            <h1 className="ds-sidebar-title ds-sidebar-label">Projetos</h1>
+            <div className="flex items-center gap-1">
+              <button
+                className="ds-button ds-button-ghost ds-button-compact ds-sidebar-new"
+                onClick={startCreatingProject}
+                title="Novo projeto"
+                type="button"
+              >
+                <Plus className="ds-icon-sm" aria-hidden="true" />
+                <span className="ds-sidebar-label">Novo</span>
+              </button>
+              <button
+                className="ds-icon-button ds-sidebar-collapse hidden lg:inline-grid"
+                aria-label={sidebarCollapsed ? "Expandir navegação de projetos" : "Recolher navegação de projetos"}
+                aria-expanded={!sidebarCollapsed}
+                onClick={() => setSidebarCollapsed((current) => !current)}
+                title={sidebarCollapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
+                type="button"
+              >
+                {sidebarCollapsed
+                  ? <PanelLeftOpen className="ds-icon-sm" aria-hidden="true" />
+                  : <PanelLeftClose className="ds-icon-sm" aria-hidden="true" />}
+              </button>
+              <button
+                ref={mobileSidebarCloseRef}
+                className="ds-icon-button ds-sidebar-mobile-close lg:hidden"
+                aria-label="Fechar navegação de projetos"
+                onClick={() => setMobileSidebarOpen(false)}
+                type="button"
+              >
+                <X className="ds-icon" aria-hidden="true" />
+              </button>
+            </div>
           </div>
-          {loading && <p className="text-sm text-slate-500">Loading projects...</p>}
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {!loading && !error && projects.length === 0 && <p className="text-sm text-slate-500">No projects yet. Create one to get started.</p>}
-          <div className="grid gap-2">
-            {projects.map((project, index) => (
-              <div className={`flex items-center gap-1 rounded-lg ${project.id === selectedId ? "bg-indigo-50" : "hover:bg-slate-50"}`} key={project.id}>
-                <button className="flex min-w-0 flex-1 items-center gap-2 p-3 text-left text-sm font-medium text-slate-700" onClick={() => { setSelectedId(project.id); setCreating(false); setEditing(false); }}>
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
-                  <span className="truncate">{project.name}</span>
-                </button>
-                <div className="flex pr-2">
-                  <button className="p-1 text-xs text-slate-500 disabled:opacity-30" aria-label={`Move ${project.name} up`} disabled={index === 0} onClick={() => { setSelectedId(project.id); void moveProject(-1); }}>↑</button>
-                  <button className="p-1 text-xs text-slate-500 disabled:opacity-30" aria-label={`Move ${project.name} down`} disabled={index === projects.length - 1} onClick={() => { setSelectedId(project.id); void moveProject(1); }}>↓</button>
+          {loading && <p className="ds-meta ds-sidebar-label">Carregando projetos...</p>}
+          {error && <p className="ds-alert ds-sidebar-label" role="alert">{error}</p>}
+          {!loading && !error && projects.length === 0 && (
+            <div className="ds-empty ds-sidebar-empty px-2 py-5">
+              <FolderPlus className="mx-auto mb-2 h-5 w-5 ds-accent-text" aria-hidden="true" />
+              <p className="ds-copy ds-sidebar-label">Nenhum projeto ainda.</p>
+              <button className="ds-button ds-button-primary ds-button-compact mt-3" onClick={startCreatingProject} title="Criar projeto">
+                <Plus className="ds-icon-sm" aria-hidden="true" />
+                <span className="ds-sidebar-label">Criar projeto</span>
+              </button>
+            </div>
+          )}
+          <div className="ds-sidebar-project-list grid gap-1.5">
+            {projects.map((project, index) => {
+              const isSelected = project.id === selectedId;
+              return (
+                <div className={`ds-project-row ${isSelected ? "is-selected" : ""}`} key={project.id}>
+                  <button
+                    className="ds-project-select flex items-center gap-2.5 p-3"
+                    aria-current={isSelected ? "page" : undefined}
+                    aria-label={sidebarCollapsed ? project.name : undefined}
+                    data-tooltip={sidebarCollapsed ? project.name : undefined}
+                    onClick={() => selectProject(project.id)}
+                    title={sidebarCollapsed ? project.name : undefined}
+                    type="button"
+                  >
+                    <span className="ds-project-dot h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? "#94A3B8" }} aria-hidden="true" />
+                    <span className="ds-project-label truncate">{project.name}</span>
+                  </button>
+                  <div className="ds-project-actions flex pr-1">
+                    <button className="ds-icon-button" aria-label={`Mover ${project.name} para cima`} disabled={index === 0} onClick={() => void moveProject(project.id, -1)} type="button">
+                      <ChevronUp className="ds-icon-sm" aria-hidden="true" />
+                    </button>
+                    <button className="ds-icon-button" aria-label={`Mover ${project.name} para baixo`} disabled={index === projects.length - 1} onClick={() => void moveProject(project.id, 1)} type="button">
+                      <ChevronDown className="ds-icon-sm" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
-        <section className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-          {creating && <><h2 className="mb-5 text-2xl font-bold text-slate-900">New project</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
-          {!creating && editing && selected && <><h2 className="mb-5 text-2xl font-bold text-slate-900">Edit project</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
-          {!creating && !editing && !selected && <div className="py-16 text-center"><h2 className="text-2xl font-bold text-slate-900">Choose a project</h2><p className="mt-2 text-slate-500">Create your first project to start organizing work.</p></div>}
-          {!creating && !editing && selected && <div className="min-w-0">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div><div className="flex items-center gap-3"><span className="h-4 w-4 rounded-full" style={{ backgroundColor: selected.color ?? "#94A3B8" }} aria-hidden="true" /><h2 className="text-3xl font-bold text-slate-900">{selected.name}</h2></div><p className="mt-3 text-slate-600">{selected.description || "No description yet."}</p></div>
-              <div className="flex gap-2"><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(true)}>Edit</button><button className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>Delete</button></div>
+
+        <section className="ds-workspace">
+          {creating && <><h2 className="ds-page-title mb-6">Novo projeto</h2><ProjectForm onSaved={saveProject} onCancel={() => setCreating(false)} /></>}
+          {!creating && editing && selected && <><h2 className="ds-page-title mb-6">Editar projeto</h2><ProjectForm project={selected} onSaved={saveProject} onCancel={() => setEditing(false)} /></>}
+          {!creating && !editing && !selected && (
+            <div className="ds-empty py-16">
+              <FolderPlus className="mx-auto mb-3 h-6 w-6 ds-accent-text" aria-hidden="true" />
+              <h2 className="ds-empty-title">Escolha um projeto</h2>
+              <p className="ds-copy mt-2">Crie seu primeiro projeto para começar a organizar o trabalho.</p>
+              <button className="ds-button ds-button-primary mt-5" onClick={startCreatingProject}>
+                <Plus className="ds-icon" aria-hidden="true" />
+                Novo projeto
+              </button>
             </div>
-            <TaskWorkspace key={selected.id} projectId={selected.id} />
-          </div>}
-          {feedback && <p className="mt-5 text-sm font-medium text-emerald-700" role="status">{feedback}</p>}
+          )}
+          {!creating && !editing && selected && (
+            <div className="min-w-0">
+              <div className="ds-workspace-header flex flex-wrap items-start justify-between gap-5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3.5 w-3.5 shrink-0 rounded-full ring-4 ring-white/5" style={{ backgroundColor: selected.color ?? "#7F8894" }} aria-hidden="true" />
+                    <h2 className="ds-page-title">{selected.name}</h2>
+                  </div>
+                  <p className="ds-copy mt-2 max-w-2xl">{selected.description || "Sem descrição ainda."}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="ds-action-button" onClick={() => setEditing(true)}>
+                    <Pencil className="ds-icon-sm" aria-hidden="true" />
+                    Editar
+                  </button>
+                  <button className="ds-action-button is-danger" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                    Excluir
+                  </button>
+                </div>
+              </div>
+              <TaskWorkspace key={selected.id} projectId={selected.id} onTasksCountChange={syncTasksCount} />
+            </div>
+          )}
+          {feedback && <p className={`ds-feedback mt-5 ${feedback.tone === "error" ? "ds-feedback-error" : ""}`} role="status">{feedback.text}</p>}
         </section>
       </div>
-      {deleteDialogOpen && selected && <div className="fixed inset-0 z-10 grid place-items-center bg-slate-900/40 p-6" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-bold text-slate-900" id="delete-title">Delete &quot;{selected.name}&quot;?</h2><p className="mt-2 text-slate-600">This action cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><button className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancel</button><button className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60" onClick={removeProject} disabled={deletePending}>{deletePending ? "Deleting..." : "Delete project"}</button></div></div>
-      </div>}
+
+      {deleteDialogOpen && selected && (
+        <div className="ds-modal-overlay fixed inset-0 z-10 grid place-items-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-description">
+          <div className="ds-modal">
+            <h2 className="ds-modal-title" id="delete-title">Excluir &quot;{selected.name}&quot;?</h2>
+            <p className="ds-copy mt-2" id="delete-description">{deleteProjectWarning(selected.tasks_count)}</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button className="ds-button ds-button-secondary" onClick={() => setDeleteDialogOpen(false)} disabled={deletePending}>Cancelar</button>
+              <button className="ds-button ds-button-danger-solid" onClick={removeProject} disabled={deletePending}>
+                <Trash2 className="ds-icon-sm" aria-hidden="true" />
+                {deletePending ? "Excluindo..." : "Excluir projeto"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
