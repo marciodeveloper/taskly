@@ -281,6 +281,47 @@ Localização aceita com a arquitetura preservada. Nenhum contrato de API, migra
 
 ---
 
+## AI-005 — Dois defeitos encontrados durante a recuperação de senha
+
+- **Data:** 2026-09-15
+- **Ferramenta/modelo:** Claude Code — Opus / Medium
+- **Objetivo:** Registrar dois problemas que a implementação inicial não revelou e que só apareceram na verificação.
+
+### 1. Enumeração de contas no endpoint de reset
+
+A implementação seguia o padrão comum do Laravel: repassar o status do Password Broker para a resposta de erro.
+
+```php
+throw ValidationException::withMessages(['email' => [__($status)]]);
+```
+
+Um teste escrito para comparar as duas respostas mostrou que isso distingue os casos: token errado para uma conta existente devolve `passwords.token`, enquanto um e-mail não cadastrado devolve `passwords.user`. Na prática, o endpoint de reset vira um oráculo de contas, mesmo com a solicitação já protegida por mensagem genérica.
+
+**Correção:** `INVALID_USER` e `INVALID_TOKEN` passam a responder de forma idêntica. O teste `test_reset_does_not_reveal_whether_the_account_exists` compara status e corpo das duas respostas e falha se voltarem a divergir.
+
+O ponto relevante para rastreabilidade é que o código estava idiomático e o teste é que expôs o problema.
+
+### 2. Variáveis do Compose ignoradas pelo `artisan serve`
+
+Ao investigar por que o e-mail de reset ia para o log em vez do Mailpit, ficou claro que `artisan serve` só encaminha uma allow-list de 14 variáveis ao servidor PHP embutido. Tudo que o `docker-compose.yml` declarava em `environment` era invisível para as requisições servidas, que caíam silenciosamente no `.env`.
+
+O sintoma era o e-mail, mas o alcance era maior: o stack Docker só funcionava porque o `.env` local do desenvolvedor tinha `DB_HOST=postgres`. Um clone novo seguindo o README copiaria o `.env.example` com `DB_HOST=127.0.0.1` e subiria quebrado.
+
+**Correção:** usar `ServeCommand::$passthroughVariables`, restrito a ambientes não-produção, para que o Compose volte a ser a fonte de verdade da topologia.
+
+Vale registrar que uma verificação anterior deu falso positivo: `docker compose exec ... tinker` mostrava a configuração correta, porque o `exec` recebe o ambiente atual do serviço, enquanto o processo servidor mantém o ambiente de criação do container. A conferência confiável foi comparar o comportamento observável — o e-mail chegar no Mailpit — e não inspecionar a config por um caminho diferente do que serve as requisições.
+
+### Decisão final
+
+Ambas as correções foram aceitas e cobertas por teste ou por verificação funcional. Nenhum contrato de API mudou.
+
+### Arquivos/commits relacionados
+
+- commit `75b9635` — `fix(docker): repassar variaveis de ambiente ao servidor de desenvolvimento`
+- commit `91b309e` — `feat(auth): implementar recuperacao de senha`
+
+---
+
 ## Política de revisão para código gerado por IA
 
 Antes de aceitar código gerado ou modificado por IA, a revisão deve considerar os itens relevantes abaixo:
