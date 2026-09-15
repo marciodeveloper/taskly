@@ -186,12 +186,14 @@ function PendingImagePreview({ file }: { file: File }) {
     return <span className="ds-meta">Loading preview...</span>;
   }
 
-  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <img
+    <Image
       src={previewUrl}
       alt={`Preview of ${file.name}`}
       className="ds-thumbnail"
+      width={48}
+      height={48}
+      unoptimized
     />
   );
 }
