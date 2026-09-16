@@ -6,13 +6,16 @@ O projeto segue intencionalmente um **processo de engenharia spec-driven, assist
 
 ## Status atual
 
-**Fase:** aplicação implementada e publicada em ambiente público de demonstração.
+**Fase:** aplicação implementada, publicada e com pipeline de CI/CD validada de ponta a ponta.
 
 As duas aplicações estão funcionais e orquestradas por Docker Compose: cadastro, login, recuperação de senha, projetos, tarefas, tags, anexos privados, visualizações em lista e Kanban com drag-and-drop, e a interface localizada em pt-BR.
 
-## Demo online
+O ambiente de produção é atualizado a partir da `main` somente depois que as validações de backend, frontend e imagens de produção passam no GitHub Actions. O deploy publica exatamente o SHA aprovado pelo CI e executa smoke tests públicos em HTTPS ao final.
 
-**https://taskly.webarthem.com.br**
+## Demonstração
+
+- **Aplicação em produção:** https://taskly.webarthem.com.br
+- **Vídeo de demonstração:** https://drive.google.com/file/d/1zBaBQHDfioLEmum22f_01lsc2vS0juEY/view?usp=sharing
 
 O ambiente público usa HTTPS, Nginx como reverse proxy e containers de produção separados para Next.js, Laravel e PostgreSQL. O cadastro é aberto, então a avaliação pode ser feita diretamente pela rota `/register` sem uma credencial pública fixa.
 
@@ -40,7 +43,10 @@ O ambiente público usa HTTPS, Nginx como reverse proxy e containers de produç�
 - API REST/JSON
 - Docker Compose
 - GitHub Actions para CI/CD
+- Runner self-hosted dedicado ao repositório
+- Deploy de SHA exato após aprovação do CI
 - Nginx + HTTPS em produção
+- Smoke tests públicos pós-deploy
 - Mailpit (captura de e-mail em desenvolvimento)
 - Desenvolvimento assistido por IA com rastreabilidade de revisão
 
@@ -211,9 +217,26 @@ No ambiente público atual, `MAIL_MAILER=log`; portanto, o fluxo externo de recu
 
 ## CI/CD e publicação
 
-O workflow em `.github/workflows/ci-cd.yml` está preparado para validar backend, frontend e imagens de produção antes do deploy e para publicar um SHA exato na VPS.
+O workflow em `.github/workflows/ci-cd.yml` está **operacional e validado de ponta a ponta** em um runner self-hosted, dedicado a este repositório e instalado na mesma VPS que hospeda a produção.
 
-A primeira publicação foi inicializada manualmente por SHA exato após a mesma bateria de validações locais, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Isso não é apresentado como CI remoto aprovado: o workflow permanece versionado e será a via normal de deploy da `main` quando os runners estiverem disponíveis.
+A pipeline separa as verificações em três frentes antes de liberar o deploy:
+
+1. **Backend:** build de uma imagem de CI isolada, execução da suíte do Laravel e `Pint --test`.
+2. **Frontend:** build em container, ESLint e build de produção do Next.js.
+3. **Produção:** validação do `docker-compose.prod.yml` e build das imagens finais de API e frontend.
+
+O job de deploy depende do sucesso dessas três etapas. Em pushes na `main`, ele:
+
+- publica exatamente o `GITHUB_SHA` que passou pelo CI;
+- usa um checkout de produção separado do diretório de desenvolvimento;
+- executa migrations com `--force`;
+- recria os containers necessários sem expor o PostgreSQL ao host;
+- executa health checks internos;
+- valida publicamente por HTTPS as rotas `/`, `/login`, `/register`, `/up` e `/sanctum/csrf-cookie`.
+
+Pull requests originados de forks não executam jobs no runner self-hosted, evitando que código externo não confiável seja executado diretamente na VPS.
+
+A primeira publicação do ambiente foi inicializada manualmente por SHA exato depois da mesma bateria de validações, porque os GitHub-hosted runners estavam indisponíveis por uma limitação externa da conta. Depois disso, foi configurado o runner self-hosted e o fluxo completo de CI/CD passou a ser o caminho normal e já foi validado com sucesso em produção.
 
 A produção atualmente publicada usa:
 
