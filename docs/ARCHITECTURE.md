@@ -301,15 +301,42 @@ Uma pessoa contribuindo consegue subir a aplicação completa a partir do README
 
 ## 16. CI/CD e topologia de produção
 
-O workflow versionado em `.github/workflows/ci-cd.yml` separa as validações em três frentes:
+O workflow versionado em `.github/workflows/ci-cd.yml` está operacional com um runner **self-hosted, Linux/X64 e escopado ao repositório** na mesma VPS que hospeda a produção.
 
-- backend: instalação de dependências, testes Laravel e Pint;
-- frontend: `npm ci`, ESLint e build Next.js;
-- produção: validação do Compose e build das imagens de API e web.
+A pipeline separa as validações em três frentes independentes:
 
-O job de deploy depende dessas validações e foi desenhado para publicar exatamente o `GITHUB_SHA`, em vez de fazer deploy do estado genérico de uma branch. Pushes em `feat/visual-polish` executam CI sem deploy automático; pushes em `main` podem seguir para produção depois dos checks, e `workflow_dispatch` permite disparo explícito quando o workflow estiver disponível na default branch.
+- **backend:** build de uma imagem de CI isolada, execução de `php artisan test` e `Pint`;
+- **frontend:** build da imagem de desenvolvimento, `npm run lint` e `npm run build`;
+- **produção:** validação do `docker-compose.prod.yml` e build das imagens finais de API e web com tags temporárias de CI.
 
-A primeira publicação foi feita manualmente por SHA exato depois da execução local da mesma bateria de validações, porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Esse bootstrap manual não é tratado como CI remoto aprovado. O primeiro SHA de aplicação publicado e validado foi `28b2984c47906066305716f802eb1ab03c4fca1b`.
+Como o repositório é público e o runner possui acesso ao Docker/host, jobs disparados por pull requests de forks são explicitamente ignorados. O workflow não usa `pull_request_target`; código não confiável vindo de forks não é executado no runner da VPS.
+
+O job de deploy depende das três validações anteriores e só pode ocorrer em `main`: por push após merge ou por `workflow_dispatch` explícito na branch principal. O deploy publica exatamente o `GITHUB_SHA` que passou no CI, em vez de implantar o estado genérico da branch.
+
+Fluxo efetivo:
+
+```text
+push/merge em main
+        |
+        +--> backend tests + Pint
+        |
+        +--> frontend lint + build
+        |
+        +--> production compose + image builds
+                    |
+                    v
+            deploy do SHA exato
+                    |
+                    +--> migrations --force
+                    +--> health checks internos
+                    +--> smoke tests públicos HTTPS
+```
+
+O script `scripts/deploy-production.sh` recebe obrigatoriamente um SHA completo de 40 caracteres, usa lock para impedir deploys concorrentes, valida o `.env.production`, exige `APP_ENV=production`, `APP_DEBUG=false`, cookie seguro, chave Laravel válida, senha forte de banco e portas esperadas, e recusa sobrescrever um checkout de produção com alterações locais rastreadas.
+
+Depois das validações, o script faz fetch e checkout detached do SHA solicitado, valida o Compose, constrói as imagens, garante o PostgreSQL saudável, executa migrations com `--force`, sobe API e web e executa health checks internos. O próprio workflow conclui com smoke tests públicos em HTTPS para `/`, `/login`, `/register`, `/up` e `/sanctum/csrf-cookie`.
+
+A primeira publicação do projeto foi inicializada manualmente por SHA exato porque os GitHub-hosted runners estavam indisponíveis por um bloqueio externo da conta. Esse bootstrap histórico foi posteriormente substituído pelo fluxo self-hosted descrito acima. A pipeline já foi validada de ponta a ponta em `main`, incluindo o deploy automático de um SHA aprovado pelo CI e os smoke tests públicos pós-deploy.
 
 A topologia efetiva de produção é:
 
@@ -350,7 +377,7 @@ Características operacionais:
 - Mailpit não existe em produção;
 - o ambiente público atual usa `MAIL_MAILER=log`, então recuperação externa por e-mail depende de SMTP real.
 
-O checkout de produção vive separado do diretório de desenvolvimento e o script `scripts/deploy-production.sh` recebe explicitamente um SHA de 40 caracteres, valida o ambiente, faz checkout detached desse commit, aplica migrations com `--force`, sobe os containers e executa health checks internos.
+O checkout de produção vive separado do diretório de desenvolvimento e a pipeline não depende de credenciais SSH de deploy armazenadas no GitHub, pois o runner executa o script localmente na VPS. O SHA do workflow continua sendo a unidade de publicação.
 
 ## 17. Fronteira da engenharia assistida por IA
 

@@ -1,58 +1,75 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Taskly API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend autoritativo do Taskly, responsável por autenticação, autorização, validação, regras de negócio, persistência, anexos privados e contratos da API REST.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3+
+- Laravel
+- Laravel Sanctum
+- PostgreSQL
+- PHPUnit
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Responsabilidades principais
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- cadastro, login, logout e sessão autenticada;
+- recuperação de senha com Password Broker do Laravel;
+- ownership de projetos, tarefas, tags e anexos;
+- autorização com Policies;
+- validação com Form Requests;
+- serialização da API com Laravel Resources;
+- upload e download autorizado de anexos privados;
+- persistência em PostgreSQL;
+- testes automatizados de backend.
 
-## Learning Laravel
+O frontend Next.js não acessa o banco diretamente. Toda operação de domínio passa pela API Laravel.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Estrutura relevante
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+apps/api/
+├── app/
+│   ├── Actions/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   └── Resources/
+│   ├── Models/
+│   └── Policies/
+├── database/
+│   ├── factories/
+│   ├── migrations/
+│   └── seeders/
+├── routes/
+└── tests/
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Desenvolvimento local
 
-## Contributing
+O caminho recomendado é subir o monorepo pela raiz:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+cp apps/api/.env.example apps/api/.env
+docker compose up -d --build
+docker compose exec api php artisan key:generate
+docker compose exec api php artisan migrate --seed
+```
 
-## Code of Conduct
+A API fica disponível em:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```text
+http://127.0.0.1:18000
+```
 
-## Security Vulnerabilities
+## Testes e estilo
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+docker compose exec api php artisan test
+docker compose exec api ./vendor/bin/pint --test
+```
 
-## License
+## Produção
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Em produção, o Laravel roda em container próprio atrás do Nginx e não expõe diretamente o PostgreSQL. Os anexos ficam em armazenamento privado persistente e o deploy usa exatamente o SHA aprovado pela pipeline do GitHub Actions.
+
+A documentação principal do projeto está no [`README.md`](../../README.md), com detalhes adicionais em [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) e [`docs/AI_USAGE.md`](../../docs/AI_USAGE.md).
