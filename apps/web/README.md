@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Taskly Web
 
-## Getting Started
+Frontend do Taskly, responsável pela experiência de produto, navegação entre projetos, formulários, visualizações de tarefas em lista e Kanban, drag-and-drop, estados otimistas e feedback ao usuário.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- `@dnd-kit/core`
+- `lucide-react`
+
+## Responsabilidades principais
+
+- autenticação e recuperação de senha consumindo a API Laravel;
+- shell autenticado e navegação entre projetos;
+- criação e edição de projetos e tarefas;
+- visualizações em lista e Kanban;
+- drag-and-drop com atualização otimista e rollback em caso de falha;
+- formulários, validação de experiência e mensagens de erro;
+- interface responsiva e localizada em pt-BR;
+- cliente HTTP tipado para os contratos REST do backend.
+
+O frontend não acessa PostgreSQL diretamente e não é autoridade sobre regras de negócio. Autorização, validação e persistência permanecem no Laravel.
+
+## Estrutura relevante
+
+```text
+apps/web/
+├── src/
+│   ├── app/
+│   ├── components/
+│   └── lib/
+│       ├── api/
+│       ├── auth/
+│       └── tasks/
+└── public/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Desenvolvimento local
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O caminho recomendado é subir o monorepo pela raiz com Docker Compose. Para executar apenas o frontend no host:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd apps/web
+npm ci
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
 
-## Learn More
+Por padrão, o frontend usa a API em:
 
-To learn more about Next.js, take a look at the following resources:
+```text
+http://127.0.0.1:18000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Se quiser deixar a configuração explícita:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cp .env.example .env.local
+```
 
-## Deploy on Vercel
+## Verificações
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Essas verificações também são executadas pela pipeline de CI antes de qualquer deploy da `main`.
+
+## Produção
+
+Em produção, o Next.js roda em container próprio atrás do Nginx no mesmo origin público do Laravel:
+
+```text
+https://taskly.webarthem.com.br
+```
+
+A pipeline constrói a imagem de produção, publica exatamente o SHA aprovado pelo CI e executa smoke tests públicos após o deploy.
+
+A documentação principal do projeto está no [`README.md`](../../README.md), com detalhes adicionais em [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) e [`docs/AI_USAGE.md`](../../docs/AI_USAGE.md).
